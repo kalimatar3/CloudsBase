@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4369351c212924644be2f4e6e362df60, type: 3}
+  m_Name: MoveDown
+  m_EditorClassIdentifier: CloudsAssembly::UIAnimationData
+  Effects:
+  - type: 0
+    Delay: 0
+    moveType: 0
+    Offset: {x: 0, y: -200, z: 0}
+    timeMove: 0.2
+    easeMove: 5
+    loopMove: 0
+    MoveLoopType: 0
+    loopCircleMove: 0
+    rotateTo: {x: 0, y: 0, z: 0}
+    timeRotate: 0
+    easeRotate: 0
+    loopRotate: 0
+    RotateLoopType: 0
+    loopCircleRotate: 0
+    scalefrom: {x: 1, y: 1, z: 1}
+    scaleTo: {x: 1, y: 1, z: 1}
+    timeScale: 0
+    scaleActivate: 0
+    easeScale: 0
+    loopScale: 0
+    ScaleLoopType: 0
+    loopCircleScale: 0
+    shakePosition: 0
+    shakeRotation: 0
+    shakeScale: 0
+    shakeStrength: 0
+    shakeRandomness: 0
+    timeShake: 0
+    shakeVibrate: 0
+    easeShake: 0
+    loopShake: 0
+    ShakeLoopType: 0
+    loopCircleShake: 0
+    punchPostion: 0
+    punchRotation: 0
+    punchScale: 0
+    punchTo: {x: 0, y: 0}
+    punchVibrate: 0
+    punchElasticity: 0
+    timePunch: 0
+    easePunch: 0
+    loopPunch: 0
+    PunchLoopType: 0
+    loopCirclePunch: 0
+    fadefrom: 0
+    fadeTo: 1
+    timeFade: 0
+    easeFade: 0
+    loopFade: 0
+    FadeLooptype: 0
+    loopCircleFade: 0

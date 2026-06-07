@@ -1,0 +1,50 @@
+GridBackground {
+    --grid-background-color: #2b2b2b;
+    --line-color: rgba(0, 0, 0, 0.1);
+    --thick-line-color: rgba(0, 0, 0, 0.2);
+}
+
+.sender-node #title {
+    background-color: #2e4d2e;
+}
+
+.sender-node {
+    min-width: 200px;
+}
+
+.receiver-node #title {
+    background-color: #2e3d4d;
+}
+
+.receiver-node {
+    min-width: 250px;
+}
+
+.port #type {
+    display: none;
+}
+
+.port #name {
+    min-width: 50px;
+    font-size: 11px;
+}
+
+.port #name {
+    font-size: 12px;
+    color: #e0e0e0;
+    margin-right: 5px;
+    margin-left: 5px;
+    flex-grow: 1;
+    min-width: 50px;
+}
+
+Button {
+    background-color: #444;
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: #222;
+}
+
+Button:hover {
+    background-color: #555;
+}
