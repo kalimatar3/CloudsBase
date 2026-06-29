@@ -15,7 +15,7 @@ namespace Clouds.UI.Animation
         public DOTweenUIAnimation(Tween tween)
         {
             _tween = tween;
-            if (_tween != null) 
+            if (_tween != null)
             {
                 _tween.OnComplete(() => OnComplete?.Invoke());
                 _tween.OnStart(() => OnStart?.Invoke());
@@ -26,153 +26,123 @@ namespace Clouds.UI.Animation
         public void Stop() => _tween?.Kill();
         public void Restart() => _tween?.Restart();
         public bool IsPlaying => _tween != null && _tween.IsPlaying();
-        public object NativeAnimation => _tween; // Returns the actual Tween for the Editor
+        public object NativeAnimation => _tween;
         public float Duration => _tween.Duration();
     }
 
     public class DOTweenAnimationFactory : IUIAnimationFactory
     {
-        // Helper function to map Ease
         private DG.Tweening.Ease MapEase(Ease ease)
+            => (DG.Tweening.Ease)Enum.Parse(typeof(DG.Tweening.Ease), ease.ToString());
+
+        private DG.Tweening.LoopType MapLoop(LoopType loopType)
+            => (DG.Tweening.LoopType)Enum.Parse(typeof(DG.Tweening.LoopType), loopType.ToString());
+
+        private void ApplyEase(Tween tween, UIEffectData effect)
         {
-            return (DG.Tweening.Ease)Enum.Parse(typeof(DG.Tweening.Ease), ease.ToString());
+            if (effect.EaseType == Ease.Custom) tween.SetEase(effect.Curve);
+            else tween.SetEase(MapEase(effect.EaseType));
         }
-        // Helper function to map LoopType
-        private DG.Tweening.LoopType MapLoop(LoopType loopType) {
-            return (DG.Tweening.LoopType)Enum.Parse(typeof(DG.Tweening.LoopType),loopType.ToString());
-        }
-        public IUIAnimation CreateMove(RectTransform rect, UIEffectData effect, IUISetData data = null, bool ignoreTimeScale = false)
-        {
-            DG.Tweening.Ease dotweenEase = MapEase(effect.easeMove);
-            Sequence seq = DOTween.Sequence()
+
+        private static Sequence BaseSequence(bool ignoreTimeScale, GameObject link) =>
+            DOTween.Sequence()
                 .SetUpdate(ignoreTimeScale)
                 .SetId(1)
                 .SetAutoKill(false)
                 .Pause()
-                .SetLink(rect.gameObject, LinkBehaviour.KillOnDestroy);
+                .SetLink(link, LinkBehaviour.KillOnDestroy);
 
-            Vector2 startPos = rect.anchoredPosition;
+        public IUIAnimation CreateMove(RectTransform rect, UIEffectData effect, IUISetData data = null, bool ignoreTimeScale = false)
+        {
+            Sequence seq = BaseSequence(ignoreTimeScale, rect.gameObject);
+
+            Vector2 startPos  = rect.anchoredPosition;
             Vector2 targetPos = rect.anchoredPosition;
-            switch (effect.moveType)
+            switch (effect.MoveType)
             {
-                case MOVEEFFECT.Custom:
-                    startPos = targetPos + (Vector2)effect.Offset;
-                    break;
-                case MOVEEFFECT.FromAbove:
-                    startPos = new Vector2(targetPos.x, (Screen.height / 2f) + (rect.rect.height / 2f) + 100f);
-                    break;
-                case MOVEEFFECT.FromBelow:
-                    startPos = new Vector2(targetPos.x, -((Screen.height / 2f) + (rect.rect.height / 2f) + 100f));
-                    break;
-                case MOVEEFFECT.FromLeft:
-                    startPos = new Vector2(-((Screen.width / 2f) + (rect.rect.width / 2f) + 100f), targetPos.y);
-                    break;
-                case MOVEEFFECT.FromRight:
-                    startPos = new Vector2((Screen.width / 2f) + (rect.rect.width / 2f) + 100f, targetPos.y);
-                    break;
-                case MOVEEFFECT.ToAbove:
-                    targetPos = new Vector2(startPos.x, (Screen.height / 2f) + (rect.rect.height / 2f) + 100f);
-                    break;
-                case MOVEEFFECT.ToBelow:
-                    targetPos = new Vector2(startPos.x, -((Screen.height / 2f) + (rect.rect.height / 2f) + 100f));
-                    break;
-                case MOVEEFFECT.ToLeft:
-                    targetPos = new Vector2(-((Screen.width / 2f) + (rect.rect.width / 2f) + 100f), startPos.y);
-                    break;
-                case MOVEEFFECT.ToRight:
-                    targetPos = new Vector2((Screen.width / 2f) + (rect.rect.width / 2f) + 100f, startPos.y);
-                    break;
+                case MOVEEFFECT.Custom:    startPos  = targetPos + (Vector2)effect.Offset; break;
+                case MOVEEFFECT.FromAbove: startPos  = new Vector2(targetPos.x,  ( Screen.height / 2f) + (rect.rect.height / 2f) + 100f); break;
+                case MOVEEFFECT.FromBelow: startPos  = new Vector2(targetPos.x, -((Screen.height / 2f) + (rect.rect.height / 2f) + 100f)); break;
+                case MOVEEFFECT.FromLeft:  startPos  = new Vector2(-((Screen.width / 2f) + (rect.rect.width  / 2f) + 100f), targetPos.y); break;
+                case MOVEEFFECT.FromRight: startPos  = new Vector2( (Screen.width / 2f) + (rect.rect.width  / 2f) + 100f,  targetPos.y); break;
+                case MOVEEFFECT.ToAbove:   targetPos = new Vector2(startPos.x,  ( Screen.height / 2f) + (rect.rect.height / 2f) + 100f); break;
+                case MOVEEFFECT.ToBelow:   targetPos = new Vector2(startPos.x, -((Screen.height / 2f) + (rect.rect.height / 2f) + 100f)); break;
+                case MOVEEFFECT.ToLeft:    targetPos = new Vector2(-((Screen.width / 2f) + (rect.rect.width  / 2f) + 100f), startPos.y); break;
+                case MOVEEFFECT.ToRight:   targetPos = new Vector2( (Screen.width / 2f) + (rect.rect.width  / 2f) + 100f,  startPos.y); break;
             }
 
             if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
-            seq.Append(rect.DOAnchorPos(targetPos, effect.timeMove).From(startPos, false, false).SetEase(dotweenEase));
-            if (effect.loopMove) seq.SetLoops(effect.loopCircleMove);
+            var tween = rect.DOAnchorPos(targetPos, effect.Duration).From(startPos, false, false);
+            ApplyEase(tween, effect);
+            seq.Append(tween);
+            if (effect.Loop) seq.SetLoops(effect.LoopCount, MapLoop(effect.LoopType));
             return new DOTweenUIAnimation(seq);
         }
 
         public IUIAnimation CreateRotate(RectTransform rect, UIEffectData effect, IUISetData data = null, bool ignoreTimeScale = false)
         {
             Vector3 startRot = rect.localEulerAngles;
-            Sequence seq = DOTween.Sequence()
-                .SetUpdate(ignoreTimeScale)
-                .SetId(1)
-                .SetAutoKill(false)
-                .Pause()
-                .SetLink(rect.gameObject, LinkBehaviour.KillOnDestroy);
+            Sequence seq = BaseSequence(ignoreTimeScale, rect.gameObject);
 
             if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
-            seq.Append(rect.DOLocalRotate(effect.rotateTo, effect.timeRotate, RotateMode.FastBeyond360).From(startRot, false, false).SetEase(MapEase(effect.easeRotate)));
-            if (effect.loopRotate) seq.SetLoops(effect.loopCircleRotate);
+            var tween = rect.DOLocalRotate(effect.RotateTo, effect.Duration, RotateMode.FastBeyond360).From(startRot, false, false);
+            ApplyEase(tween, effect);
+            seq.Append(tween);
+            if (effect.Loop) seq.SetLoops(effect.LoopCount, MapLoop(effect.LoopType));
             return new DOTweenUIAnimation(seq);
         }
 
         public IUIAnimation CreateScale(RectTransform rect, UIEffectData effect, IUISetData data = null, bool ignoreTimeScale = false)
         {
             if (rect == null && data != null) rect = data.UIObj.GetComponent<RectTransform>();
-            Sequence seq = DOTween.Sequence()
-                .SetUpdate(ignoreTimeScale)
-                .SetId(1)
-                .SetAutoKill(false)
-                .Pause()
-                .SetLink(rect.gameObject, LinkBehaviour.KillOnDestroy);
+            Sequence seq = BaseSequence(ignoreTimeScale, rect.gameObject);
 
             if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
-            seq.Append(rect.DOScale(effect.scaleTo, effect.timeScale).From(effect.scalefrom, false, false).SetEase(MapEase(effect.easeScale)));
-            seq.SetLoops(effect.loopCircleScale, MapLoop(effect.ScaleLoopType));
-
+            var tween = rect.DOScale(effect.ScaleTo, effect.Duration).From(effect.ScaleFrom, false, false);
+            ApplyEase(tween, effect);
+            seq.Append(tween);
+            if (effect.Loop) seq.SetLoops(effect.LoopCount, MapLoop(effect.LoopType));
             return new DOTweenUIAnimation(seq);
         }
 
         public IUIAnimation CreateShake(RectTransform rect, UIEffectData effect, IUISetData data = null, bool ignoreTimeScale = false)
         {
-            Sequence seq = DOTween.Sequence()
-                .SetUpdate(ignoreTimeScale)
-                .SetId(1)
-                .SetAutoKill(false)
-                .Pause()
-                .SetLink(rect.gameObject,LinkBehaviour.KillOnDestroy);
-
+            Sequence seq = BaseSequence(ignoreTimeScale, rect.gameObject);
             seq.AppendInterval(effect.Delay);
 
             Tween shakeTween = null;
-            if (effect.shakePosition) shakeTween = rect.DOShakePosition(effect.timeShake, effect.shakeStrength, effect.shakeVibrate, effect.shakeRandomness);
-            else if (effect.shakeRotation) shakeTween = rect.DOShakeRotation(effect.timeShake, effect.shakeStrength, effect.shakeVibrate, effect.shakeRandomness);
-            else if (effect.shakeScale) shakeTween = rect.DOShakeScale(effect.timeShake, effect.shakeStrength, effect.shakeVibrate, effect.shakeRandomness);
+            if      (effect.ShakePosition) shakeTween = rect.DOShakePosition(effect.Duration, effect.ShakeStrength, effect.ShakeVibrato, effect.ShakeRandomness);
+            else if (effect.ShakeRotation) shakeTween = rect.DOShakeRotation(effect.Duration, effect.ShakeStrength, effect.ShakeVibrato, effect.ShakeRandomness);
+            else if (effect.ShakeScale)    shakeTween = rect.DOShakeScale(effect.Duration,    effect.ShakeStrength, effect.ShakeVibrato, effect.ShakeRandomness);
 
             if (shakeTween != null)
             {
-                shakeTween.SetEase(MapEase(effect.easeShake));
+                ApplyEase(shakeTween, effect);
                 seq.Append(shakeTween);
             }
 
-            if (effect.loopShake) seq.SetLoops(effect.loopCircleShake);
+            if (effect.Loop) seq.SetLoops(effect.LoopCount, MapLoop(effect.LoopType));
             return new DOTweenUIAnimation(seq);
         }
 
         public IUIAnimation CreatePunch(RectTransform rect, UIEffectData effect, IUISetData data = null, bool ignoreTimeScale = false)
         {
             if (rect == null && data != null) rect = data.UIObj.GetComponent<RectTransform>();
-            Sequence seq = DOTween.Sequence()
-                .SetUpdate(ignoreTimeScale)
-                .SetId(1)
-                .SetAutoKill(false)
-                .Pause()
-                .SetLink(rect.gameObject, LinkBehaviour.KillOnDestroy);
-
+            Sequence seq = BaseSequence(ignoreTimeScale, rect.gameObject);
             seq.AppendInterval(effect.Delay);
 
             Tween punchTween = null;
-            if (effect.punchPostion) punchTween = rect.DOPunchPosition(effect.punchTo, effect.timePunch, effect.punchVibrate, effect.punchElasticity);
-            else if (effect.punchRotation) punchTween = rect.DOPunchRotation(effect.punchTo, effect.timePunch, effect.punchVibrate, effect.punchElasticity);
-            else if (effect.punchScale) punchTween = rect.DOPunchScale(effect.punchTo, effect.timePunch, effect.punchVibrate, effect.punchElasticity);
+            if      (effect.PunchPosition) punchTween = rect.DOPunchPosition(effect.PunchDirection, effect.Duration, effect.PunchVibrato, effect.PunchElasticity);
+            else if (effect.PunchRotation) punchTween = rect.DOPunchRotation(effect.PunchDirection, effect.Duration, effect.PunchVibrato, effect.PunchElasticity);
+            else if (effect.PunchScale)    punchTween = rect.DOPunchScale(effect.PunchDirection,    effect.Duration, effect.PunchVibrato, effect.PunchElasticity);
 
             if (punchTween != null)
             {
-                punchTween.SetEase(MapEase(effect.easePunch));
+                ApplyEase(punchTween, effect);
                 seq.Append(punchTween);
             }
 
-            if (effect.loopPunch) seq.SetLoops(effect.loopCirclePunch);
+            if (effect.Loop) seq.SetLoops(effect.LoopCount, MapLoop(effect.LoopType));
             return new DOTweenUIAnimation(seq);
         }
 
@@ -181,44 +151,28 @@ namespace Clouds.UI.Animation
             if (canvas == null && data != null) canvas = data.UIObj.GetComponent<CanvasGroup>();
             if (canvas == null && data != null) canvas = data.UIObj.AddComponent<CanvasGroup>();
 
-            Sequence sequence = DOTween.Sequence()
-                .SetUpdate(ignoreTimeScale)
-                .SetAutoKill(false)
-                .Pause()
-                .SetLink(canvas.gameObject, LinkBehaviour.KillOnDestroy);
-                if (effect.Delay > 0) sequence.AppendInterval(effect.Delay);
-                sequence.Append(canvas.DOFade(effect.fadeTo, effect.timeFade)
-                .From(effect.fadefrom, false, false)
-                .SetEase(MapEase(effect.easeFade)));
-            if (effect.loopFade) sequence.SetLoops(effect.loopCircleFade);
-            return new DOTweenUIAnimation(sequence);
+            Sequence seq = BaseSequence(ignoreTimeScale, canvas.gameObject);
+            if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
+            var tween = canvas.DOFade(effect.FadeTo, effect.Duration).From(effect.FadeFrom, false, false);
+            ApplyEase(tween, effect);
+            seq.Append(tween);
+            if (effect.Loop) seq.SetLoops(effect.LoopCount, MapLoop(effect.LoopType));
+            return new DOTweenUIAnimation(seq);
         }
 
         public IUIAnimation CreateColor(Graphic graphic, UIEffectData effect, IUISetData data = null, bool ignoreTimeScale = false)
         {
-            if (graphic == null && data != null)
-                graphic = data.UIObj.GetComponent<Graphic>();
-
+            if (graphic == null && data != null) graphic = data.UIObj.GetComponent<Graphic>();
             if (graphic == null)
                 return new DOTweenUIAnimation(DOTween.Sequence().SetUpdate(ignoreTimeScale).SetAutoKill(false).Pause());
 
-            Sequence sequence = DOTween.Sequence()
-                .SetUpdate(ignoreTimeScale)
-                .SetAutoKill(false)
-                .Pause()
-                .SetLink(graphic.gameObject, LinkBehaviour.KillOnDestroy);
-
-            if (effect.Delay > 0)
-                sequence.AppendInterval(effect.Delay);
-
-            sequence.Append(graphic.DOColor(effect.colorTo, effect.timeColor)
-                .From(effect.colorFrom, false)
-                .SetEase(MapEase(effect.easeColor)));
-
-            if (effect.loopColor)
-                sequence.SetLoops(effect.loopCircleColor, MapLoop(effect.ColorLoopType));
-
-            return new DOTweenUIAnimation(sequence);
+            Sequence seq = BaseSequence(ignoreTimeScale, graphic.gameObject);
+            if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
+            var tween = graphic.DOColor(effect.ColorTo, effect.Duration).From(effect.ColorFrom, false);
+            ApplyEase(tween, effect);
+            seq.Append(tween);
+            if (effect.Loop) seq.SetLoops(effect.LoopCount, MapLoop(effect.LoopType));
+            return new DOTweenUIAnimation(seq);
         }
     }
 }

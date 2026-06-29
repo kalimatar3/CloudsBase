@@ -6,7 +6,7 @@ using Clouds.Ultilities;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.UI;
-
+[RequireComponent(typeof(RectTransform))]
 public class TweenCUIAnimation : MyBehaviour, IUIAnimation
 {
     private static IUIAnimationFactory _factory;
@@ -18,74 +18,82 @@ public class TweenCUIAnimation : MyBehaviour, IUIAnimation
             return _factory;
         }
     }
+
     public UIAnimationData UIAnimationData;
-    protected List<IUIAnimation> animations = new List<IUIAnimation>();
-    public bool IsPlaying => throw new NotImplementedException();
 
-    public object NativeAnimation => UIAnimationData;
+    private readonly List<IUIAnimation> _animations = new();
 
-    public float Duration => UIAnimationData.GetTotalDuration();
+    public bool IsPlaying
+    {
+        get { foreach (var a in _animations) if (a.IsPlaying) return true; return false; }
+    }
+
+    public object NativeAnimation => _animations.Count > 0 ? _animations[0].NativeAnimation : null;
+
+    public float Duration => UIAnimationData != null ? UIAnimationData.GetTotalDuration() : 0f;
 
     public event Action OnComplete;
     public event Action OnStart;
+
     protected override void Awake()
     {
         base.Awake();
-        this.CreateUIAnimations();
-    }
-    [Sirenix.OdinInspector.Button(ButtonSizes.Large)]
-    public void Play()
-    {
-        foreach (var anim in animations)
-        {
-            anim.Play();
-        }
+        Build();
     }
 
-    public void Restart()
+    [Button(ButtonSizes.Large)]
+    public void Play()
     {
+        if (_animations.Count == 0) return;
+        HookOneShot(_animations[0],   isStart: true,  () => OnStart?.Invoke());
+        HookOneShot(_animations[^1],  isStart: false, () => OnComplete?.Invoke());
+        foreach (var anim in _animations) anim.Restart();
     }
 
     public void Stop()
     {
-        
+        foreach (var anim in _animations) anim.Stop();
     }
-    [Sirenix.OdinInspector.Button(ButtonSizes.Large)]
-    public void CreateUIAnimations()
+
+    public void Restart() => Play();
+
+    private void Build()
     {
-        if (animations != null && animations.Count > 0) return;
-        animations = new List<IUIAnimation>();
-        RectTransform rt = this.GetComponent<RectTransform>();
-        CanvasGroup cg = this.GetComponent<CanvasGroup>();
-        foreach (UIEffectData effect in UIAnimationData.Effects)
+        _animations.Clear();
+        if (UIAnimationData == null) return;
+
+        var rt      = GetComponent<RectTransform>();
+        var cg      = GetComponent<CanvasGroup>();
+        var graphic = GetComponent<Graphic>();
+
+        foreach (var effect in UIAnimationData.Effects)
         {
-            IUIAnimation anim = null;
-            switch (effect.type)
+            IUIAnimation anim = effect.type switch
             {
-                case TRIGGEREFFECT.Move:
-                    anim = AnimationFactory.CreateMove(rt, effect);
-                    break;
-                case TRIGGEREFFECT.Rotate:
-                    anim = AnimationFactory.CreateRotate(rt, effect);
-                    break;
-                case TRIGGEREFFECT.Scale:
-                    anim = AnimationFactory.CreateScale(rt, effect);
-                    break;
-                case TRIGGEREFFECT.Shake:
-                    anim = AnimationFactory.CreateShake(rt, effect);
-                    break;
-                case TRIGGEREFFECT.Punch:
-                    anim = AnimationFactory.CreatePunch(rt, effect);
-                    break;
-                case TRIGGEREFFECT.Fade:
-                    if (cg != null) anim = AnimationFactory.CreateFade(cg, effect);
-                    break;
-                case TRIGGEREFFECT.Color:
-                    Graphic graphic = this.GetComponent<Graphic>();
-                    if (graphic != null) anim = AnimationFactory.CreateColor(graphic, effect);
-                    break;
-            }
-            if (anim != null) animations.Add(anim);
+                TRIGGEREFFECT.Move   => AnimationFactory.CreateMove(rt, effect),
+                TRIGGEREFFECT.Rotate => AnimationFactory.CreateRotate(rt, effect),
+                TRIGGEREFFECT.Scale  => AnimationFactory.CreateScale(rt, effect),
+                TRIGGEREFFECT.Shake  => AnimationFactory.CreateShake(rt, effect),
+                TRIGGEREFFECT.Punch  => AnimationFactory.CreatePunch(rt, effect),
+                TRIGGEREFFECT.Fade   => cg      != null ? AnimationFactory.CreateFade(cg, effect)       : null,
+                TRIGGEREFFECT.Color  => graphic != null ? AnimationFactory.CreateColor(graphic, effect) : null,
+                _                    => null
+            };
+            if (anim != null) _animations.Add(anim);
+        }
+    }
+
+    private static void HookOneShot(IUIAnimation target, bool isStart, Action callback)
+    {
+        if (isStart)
+        {
+            void Wrapper() { callback(); target.OnStart -= Wrapper; }
+            target.OnStart += Wrapper;
+        }
+        else
+        {
+            void Wrapper() { callback(); target.OnComplete -= Wrapper; }
+            target.OnComplete += Wrapper;
         }
     }
 }

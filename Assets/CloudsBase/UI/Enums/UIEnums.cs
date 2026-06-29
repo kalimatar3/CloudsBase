@@ -8,5 +8,5 @@ namespace Clouds.Ultilities
         FillText,
         ChangeOpacity,
     }
-    public enum ACTIVATETYPE { Sequence, Delay, Continuously }
+
 }

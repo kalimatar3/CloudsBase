@@ -11,91 +11,89 @@ namespace Clouds.Ultilities
     [System.Serializable]
     public struct UIEffectData
     {
-        public TRIGGEREFFECT type;        
-        public float Delay;
-        public float Duration
+        public TRIGGEREFFECT type;
+
+        // ── Type-specific (hiện ngay sau khi chọn type) ──────────────────────
+
+        [BoxGroup("Move")] [ShowIf("type", TRIGGEREFFECT.Move)]
+        public MOVEEFFECT MoveType;
+        [BoxGroup("Move")] [ShowIf("type", TRIGGEREFFECT.Move)]
+        public Vector3 Offset;
+
+        [BoxGroup("Rotate")] [ShowIf("type", TRIGGEREFFECT.Rotate)]
+        public Vector3 RotateTo;
+
+        [BoxGroup("Scale")] [ShowIf("type", TRIGGEREFFECT.Scale)]
+        [HorizontalGroup("Scale/Range"), LabelText("From"), LabelWidth(36)] public Vector3 ScaleFrom;
+        [BoxGroup("Scale")] [ShowIf("type", TRIGGEREFFECT.Scale)]
+        [HorizontalGroup("Scale/Range"), LabelText("To"),   LabelWidth(22)] public Vector3 ScaleTo;
+
+
+        [BoxGroup("Shake")] [ShowIf("type", TRIGGEREFFECT.Shake)]
+        [HorizontalGroup("Shake/Mode"), LabelText("Position"), LabelWidth(58)] public bool ShakePosition;
+        [BoxGroup("Shake")] [ShowIf("type", TRIGGEREFFECT.Shake)]
+        [HorizontalGroup("Shake/Mode"), LabelText("Rotation"), LabelWidth(58)] public bool ShakeRotation;
+        [BoxGroup("Shake")] [ShowIf("type", TRIGGEREFFECT.Shake)]
+        [HorizontalGroup("Shake/Mode"), LabelText("Scale"),    LabelWidth(42)] public bool ShakeScale;
+        [BoxGroup("Shake")] [ShowIf("type", TRIGGEREFFECT.Shake)]
+        [HorizontalGroup("Shake/Params"), LabelText("Strength"),   LabelWidth(60)] public float ShakeStrength;
+        [BoxGroup("Shake")] [ShowIf("type", TRIGGEREFFECT.Shake)]
+        [HorizontalGroup("Shake/Params"), LabelText("Randomness"), LabelWidth(78)] public float ShakeRandomness;
+        [BoxGroup("Shake")] [ShowIf("type", TRIGGEREFFECT.Shake)]
+        public int ShakeVibrato;
+
+        [BoxGroup("Punch")] [ShowIf("type", TRIGGEREFFECT.Punch)]
+        [HorizontalGroup("Punch/Mode"), LabelText("Position"), LabelWidth(58)] public bool PunchPosition;
+        [BoxGroup("Punch")] [ShowIf("type", TRIGGEREFFECT.Punch)]
+        [HorizontalGroup("Punch/Mode"), LabelText("Rotation"), LabelWidth(58)] public bool PunchRotation;
+        [BoxGroup("Punch")] [ShowIf("type", TRIGGEREFFECT.Punch)]
+        [HorizontalGroup("Punch/Mode"), LabelText("Scale"),    LabelWidth(42)] public bool PunchScale;
+        [BoxGroup("Punch")] [ShowIf("type", TRIGGEREFFECT.Punch)]
+        public Vector2 PunchDirection;
+        [BoxGroup("Punch")] [ShowIf("type", TRIGGEREFFECT.Punch)]
+        [HorizontalGroup("Punch/Params"), LabelText("Vibrato"),    LabelWidth(54)] public int PunchVibrato;
+        [BoxGroup("Punch")] [ShowIf("type", TRIGGEREFFECT.Punch)]
+        [HorizontalGroup("Punch/Params"), LabelText("Elasticity"), LabelWidth(70)] public float PunchElasticity;
+
+        [BoxGroup("Fade")] [ShowIf("type", TRIGGEREFFECT.Fade)]
+        [HorizontalGroup("Fade/Range"), LabelText("From"), LabelWidth(36), Range(0, 1)] public float FadeFrom;
+        [BoxGroup("Fade")] [ShowIf("type", TRIGGEREFFECT.Fade)]
+        [HorizontalGroup("Fade/Range"), LabelText("To"),   LabelWidth(22), Range(0, 1)] public float FadeTo;
+
+        [BoxGroup("Color")] [ShowIf("type", TRIGGEREFFECT.Color)]
+        [HorizontalGroup("Color/Range"), LabelText("From"), LabelWidth(36)] public Color ColorFrom;
+        [BoxGroup("Color")] [ShowIf("type", TRIGGEREFFECT.Color)]
+        [HorizontalGroup("Color/Range"), LabelText("To"),   LabelWidth(22)] public Color ColorTo;
+
+        // ── Timing ───────────────────────────────────────────────────────────
+        [Title("Timing")]
+        [HorizontalGroup("Timing"), LabelWidth(42)] public float Delay;
+        [HorizontalGroup("Timing"), LabelWidth(60)] public float Duration;
+
+        // ── Ease ─────────────────────────────────────────────────────────────
+        [Title("Ease")]
+        public Ease EaseType;
+        [ShowIf("@EaseType == Clouds.UI.Animation.Ease.Custom")]
+        public AnimationCurve Curve;
+
+        // ── Loop ─────────────────────────────────────────────────────────────
+        [Title("Loop")]
+        [HorizontalGroup("Loop"), LabelWidth(38)] public bool Loop;
+        [HorizontalGroup("Loop"), ShowIf("Loop"), HideLabel] public LoopType LoopType;
+        [HorizontalGroup("Loop"), ShowIf("Loop"), LabelText("Count"), LabelWidth(44)] public int LoopCount;
+
+        // ── List label (dùng bởi UIAnimationData ListDrawerSettings) ─────────
+        public readonly string SummaryLabel => type switch
         {
-            get
-            {
-                switch (type)
-                {
-                    case TRIGGEREFFECT.Move:
-                        return timeMove;
-                    case TRIGGEREFFECT.Rotate:
-                        return timeRotate;
-                    case TRIGGEREFFECT.Scale:
-                        return timeScale;
-                    case TRIGGEREFFECT.Shake:
-                        return timeShake;
-                    case TRIGGEREFFECT.Punch:
-                        return timePunch;
-                    case TRIGGEREFFECT.Fade:
-                        return timeFade;
-                    case TRIGGEREFFECT.Color:
-                        return timeColor;
-                    default:
-                        return 0f;
-                }
-            }
-        }
-        [BoxGroup("Move Settings")] [ShowIf("type", TRIGGEREFFECT.Move)] public MOVEEFFECT moveType;
-        [BoxGroup("Move Settings")] [ShowIf("type", TRIGGEREFFECT.Move)] [EnableIf("@this.type == TRIGGEREFFECT.Move")] public Vector3 Offset;
-        [BoxGroup("Move Settings")] [ShowIf("type", TRIGGEREFFECT.Move)] public float timeMove;
-        [BoxGroup("Move Settings")] [ShowIf("type", TRIGGEREFFECT.Move)] public Ease easeMove;
-        [BoxGroup("Move Settings")] [ShowIf("type", TRIGGEREFFECT.Move)] public bool loopMove;
-        [BoxGroup("Move Settings")] [ShowIf("type", TRIGGEREFFECT.Move)] [ShowIf("loopMove")] public LoopType MoveLoopType;
-        [BoxGroup("Move Settings")] [ShowIf("type", TRIGGEREFFECT.Move)] [ShowIf("loopMove")] public int loopCircleMove;
-
-        [BoxGroup("Rotate Settings")] [ShowIf("type", TRIGGEREFFECT.Rotate)] public Vector3 rotateTo;
-        [BoxGroup("Rotate Settings")] [ShowIf("type", TRIGGEREFFECT.Rotate)] public float timeRotate;
-        [BoxGroup("Rotate Settings")] [ShowIf("type", TRIGGEREFFECT.Rotate)] public Ease easeRotate;
-        [BoxGroup("Rotate Settings")] [ShowIf("type", TRIGGEREFFECT.Rotate)] public bool loopRotate;
-        [BoxGroup("Rotate Settings")] [ShowIf("type", TRIGGEREFFECT.Rotate)] [ShowIf("loopRotate")] public LoopType RotateLoopType;
-        [BoxGroup("Rotate Settings")] [ShowIf("type", TRIGGEREFFECT.Rotate)] [ShowIf("loopRotate")] public int loopCircleRotate;
-
-
-        [BoxGroup("Scale Settings")] [ShowIf("type", TRIGGEREFFECT.Scale)] public Vector3 scalefrom;
-        [BoxGroup("Scale Settings")] [ShowIf("type", TRIGGEREFFECT.Scale)] public Vector3 scaleTo;
-        [BoxGroup("Scale Settings")] [ShowIf("type", TRIGGEREFFECT.Scale)] public float timeScale;
-        [BoxGroup("Scale Settings")] [ShowIf("type", TRIGGEREFFECT.Scale)] public ACTIVATETYPE scaleActivate;
-        [BoxGroup("Scale Settings")] [ShowIf("type", TRIGGEREFFECT.Scale)] public Ease easeScale;
-        [BoxGroup("Scale Settings")] [ShowIf("type", TRIGGEREFFECT.Scale)] public bool loopScale;
-        [BoxGroup("Scale Settings")] [ShowIf("type", TRIGGEREFFECT.Scale)] public LoopType ScaleLoopType;
-        [BoxGroup("Scale Settings")] [ShowIf("type", TRIGGEREFFECT.Scale)] [ShowIf("loopScale")] public int loopCircleScale;
-
-        [BoxGroup("Shake Settings")] [ShowIf("type", TRIGGEREFFECT.Shake)] public bool shakePosition, shakeRotation, shakeScale;
-        [BoxGroup("Shake Settings")] [ShowIf("type", TRIGGEREFFECT.Shake)] public float shakeStrength, shakeRandomness, timeShake;
-        [BoxGroup("Shake Settings")] [ShowIf("type", TRIGGEREFFECT.Shake)] public int shakeVibrate;
-        [BoxGroup("Shake Settings")] [ShowIf("type", TRIGGEREFFECT.Shake)] public Ease easeShake;
-        [BoxGroup("Shake Settings")] [ShowIf("type", TRIGGEREFFECT.Shake)] public bool loopShake;
-        [BoxGroup("Shake Settings")] [ShowIf("type", TRIGGEREFFECT.Shake)] [ShowIf("loopShake")] public LoopType ShakeLoopType;
-        [BoxGroup("Shake Settings")] [ShowIf("type", TRIGGEREFFECT.Shake)] [ShowIf("loopShake")] public int loopCircleShake;
-
-        [BoxGroup("Punch Settings")] [ShowIf("type", TRIGGEREFFECT.Punch)] public bool punchPostion, punchRotation, punchScale;
-        [BoxGroup("Punch Settings")] [ShowIf("type", TRIGGEREFFECT.Punch)] public Vector2 punchTo;
-        [BoxGroup("Punch Settings")] [ShowIf("type", TRIGGEREFFECT.Punch)] public int punchVibrate;
-        [BoxGroup("Punch Settings")] [ShowIf("type", TRIGGEREFFECT.Punch)] public float punchElasticity, timePunch;
-        [BoxGroup("Punch Settings")] [ShowIf("type", TRIGGEREFFECT.Punch)] public Ease easePunch;
-        [BoxGroup("Punch Settings")] [ShowIf("type", TRIGGEREFFECT.Punch)] public bool loopPunch;
-        [BoxGroup("Punch Settings")] [ShowIf("type", TRIGGEREFFECT.Punch)] [ShowIf("loopPunch")] public LoopType PunchLoopType;
-        [BoxGroup("Punch Settings")] [ShowIf("type", TRIGGEREFFECT.Punch)] [ShowIf("loopPunch")] public int loopCirclePunch;
-
-
-        [BoxGroup("Fade Settings")] [ShowIf("type", TRIGGEREFFECT.Fade)] [Range(0, 1)] public float fadefrom;
-        [BoxGroup("Fade Settings")] [ShowIf("type", TRIGGEREFFECT.Fade)] [Range(0, 1)] public float fadeTo;
-        [BoxGroup("Fade Settings")] [ShowIf("type", TRIGGEREFFECT.Fade)] public float timeFade;
-        [BoxGroup("Fade Settings")] [ShowIf("type", TRIGGEREFFECT.Fade)] public Ease easeFade;
-        [BoxGroup("Fade Settings")] [ShowIf("type", TRIGGEREFFECT.Fade)] public bool loopFade ;
-        [BoxGroup("Fade Settings")] [ShowIf("type", TRIGGEREFFECT.Fade)] [ShowIf("loopFade")] public LoopType FadeLooptype;
-        [BoxGroup("Fade Settings")] [ShowIf("type", TRIGGEREFFECT.Fade)] [ShowIf("loopFade")] public int loopCircleFade;
-
-        [BoxGroup("Color Settings")] [ShowIf("type", TRIGGEREFFECT.Color)] public Color colorFrom;
-        [BoxGroup("Color Settings")] [ShowIf("type", TRIGGEREFFECT.Color)] public Color colorTo;
-        [BoxGroup("Color Settings")] [ShowIf("type", TRIGGEREFFECT.Color)] public float timeColor;
-        [BoxGroup("Color Settings")] [ShowIf("type", TRIGGEREFFECT.Color)] public Ease easeColor;
-        [BoxGroup("Color Settings")] [ShowIf("type", TRIGGEREFFECT.Color)] public bool loopColor;
-        [BoxGroup("Color Settings")] [ShowIf("type", TRIGGEREFFECT.Color)] [ShowIf("loopColor")] public LoopType ColorLoopType;
-        [BoxGroup("Color Settings")] [ShowIf("type", TRIGGEREFFECT.Color)] [ShowIf("loopColor")] public int loopCircleColor;
+            TRIGGEREFFECT.Move   => $"[Move] {MoveType}  {Duration:0.#}s  {EaseType}",
+            TRIGGEREFFECT.Rotate => $"[Rotate] z:{RotateTo.z:0}°  {Duration:0.#}s",
+            TRIGGEREFFECT.Scale  => $"[Scale] ({ScaleTo.x:0.#}, {ScaleTo.y:0.#})  {Duration:0.#}s",
+            TRIGGEREFFECT.Shake  => $"[Shake] str:{ShakeStrength:0.#}  {Duration:0.#}s",
+            TRIGGEREFFECT.Punch  => $"[Punch] {PunchDirection}  {Duration:0.#}s",
+            TRIGGEREFFECT.Fade   => $"[Fade] {FadeFrom:0.#}→{FadeTo:0.#}  {Duration:0.#}s",
+            TRIGGEREFFECT.Color  => $"[Color] {Duration:0.#}s  {EaseType}",
+            _                    => type.ToString()
+        };
     }
 
     [System.Serializable]

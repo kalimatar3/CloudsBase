@@ -4,7 +4,7 @@ using Clouds.UI.Editor;
 
 namespace Clouds.UI.Settings
 {
-    public enum UIAnimationProvider { DOTween, LitMotion }
+    public enum UIAnimationProvider { DOTween, PrimeTween, LitMotion }
 
     [CreateAssetMenu(fileName = "UISetting", menuName = "Clouds/UI/UISetting")]
     public class UISetting : ScriptableObject
@@ -28,6 +28,8 @@ namespace Clouds.UI.Settings
             {
                 case UIAnimationProvider.DOTween:
                     return new DOTweenAnimationFactory();
+                case UIAnimationProvider.PrimeTween:
+                    return new PrimeTweenAnimationFactory();
                 case UIAnimationProvider.LitMotion:
                     // return new LitMotionAnimationFactory(); // Se thuc thi sau
                     return new DOTweenAnimationFactory();

@@ -17,7 +17,8 @@ namespace Clouds.UI.Animation
         InCirc, OutCirc, InOutCirc,
         InElastic, OutElastic, InOutElastic,
         InBack, OutBack, InOutBack,
-        InBounce, OutBounce, InOutBounce
+        InBounce, OutBounce, InOutBounce,
+        Custom  // AnimationCurve-driven ease — set UIEffectData.Curve
     }
     public enum LoopType
     {
