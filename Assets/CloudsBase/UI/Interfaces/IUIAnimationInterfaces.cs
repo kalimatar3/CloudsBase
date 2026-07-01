@@ -28,6 +28,7 @@ namespace Clouds.UI.Animation
     public interface IUIAnimation
     {
         void Play();
+        void PlayReverse();
         void Stop();
         void Restart();
         bool IsPlaying { get; }

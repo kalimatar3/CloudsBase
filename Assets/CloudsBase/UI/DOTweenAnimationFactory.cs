@@ -23,6 +23,11 @@ namespace Clouds.UI.Animation
         }
 
         public void Play() => _tween?.Restart();
+        public void PlayReverse()
+        {
+            _tween?.Goto(_tween.Duration());
+            _tween?.PlayBackwards();
+        }
         public void Stop() => _tween?.Kill();
         public void Restart() => _tween?.Restart();
         public bool IsPlaying => _tween != null && _tween.IsPlaying();

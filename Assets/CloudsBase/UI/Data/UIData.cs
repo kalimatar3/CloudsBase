@@ -79,7 +79,7 @@ namespace Clouds.Ultilities
         // ── Loop ─────────────────────────────────────────────────────────────
         [Title("Loop")]
         [HorizontalGroup("Loop"), LabelWidth(38)] public bool Loop;
-        [HorizontalGroup("Loop"), ShowIf("Loop"), HideLabel] public LoopType LoopType;
+        [HorizontalGroup("Loop"), ShowIf("Loop"), LabelText("Mode"), LabelWidth(42)] public LoopType LoopType;
         [HorizontalGroup("Loop"), ShowIf("Loop"), LabelText("Count"), LabelWidth(44)] public int LoopCount;
 
         // ── List label (dùng bởi UIAnimationData ListDrawerSettings) ─────────

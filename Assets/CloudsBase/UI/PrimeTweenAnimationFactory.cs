@@ -12,7 +12,7 @@ namespace Clouds.UI.Animation
 {
     public class PrimeTweenUIAnimation : IUIAnimation
     {
-        private readonly Func<Sequence> _build;
+        private readonly Func<bool, Sequence> _build;
         private readonly float _duration;
         private Sequence _seq;
 
@@ -23,7 +23,7 @@ namespace Clouds.UI.Animation
         public float Duration    => _duration;
         public object NativeAnimation => _seq;
 
-        public PrimeTweenUIAnimation(Func<Sequence> build, float totalDuration)
+        public PrimeTweenUIAnimation(Func<bool, Sequence> build, float totalDuration)
         {
             _build    = build;
             _duration = totalDuration;
@@ -33,7 +33,15 @@ namespace Clouds.UI.Animation
         {
             if (_seq.isAlive) _seq.Stop();
             OnStart?.Invoke();
-            _seq = _build();
+            _seq = _build(false);
+            _seq.OnComplete(() => OnComplete?.Invoke());
+        }
+
+        public void PlayReverse()
+        {
+            if (_seq.isAlive) _seq.Stop();
+            OnStart?.Invoke();
+            _seq = _build(true);
             _seq.OnComplete(() => OnComplete?.Invoke());
         }
 
@@ -71,7 +79,6 @@ namespace Clouds.UI.Animation
 
         public IUIAnimation CreateMove(RectTransform rect, UIEffectData effect, IUISetData data = null, bool ignoreTimeScale = false)
         {
-            // Capture positions at setup time so they stay correct across replays
             Vector2 restPos   = rect.anchoredPosition;
             Vector2 startPos  = restPos;
             Vector2 targetPos = restPos;
@@ -90,17 +97,19 @@ namespace Clouds.UI.Animation
             }
 
             Vector2 s = startPos, t = targetPos;
-            TweenSettings ts  = TS(effect);
-            float delay       = effect.Delay;
-            int   cycles      = Cycles(effect);
-            PTCycleMode cm    = MapCycleMode(effect.LoopType);
+            TweenSettings ts = TS(effect);
+            float delay      = effect.Delay;
+            int   cycles     = Cycles(effect);
+            PTCycleMode cm   = MapCycleMode(effect.LoopType);
 
-            return new PrimeTweenUIAnimation(() =>
+            return new PrimeTweenUIAnimation((rev) =>
             {
-                rect.anchoredPosition = s;
+                Vector2 from = rev ? t : s;
+                Vector2 end  = rev ? s : t;
+                rect.anchoredPosition = from;
                 Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
                 if (delay > 0f) seq.ChainDelay(delay);
-                seq.Chain(Tween.UIAnchoredPosition(rect, s, t, ts));
+                seq.Chain(Tween.UIAnchoredPosition(rect, from, end, ts));
                 return seq;
             }, delay + effect.Duration);
         }
@@ -114,12 +123,14 @@ namespace Clouds.UI.Animation
             int   cycles        = Cycles(effect);
             PTCycleMode cm      = MapCycleMode(effect.LoopType);
 
-            return new PrimeTweenUIAnimation(() =>
+            return new PrimeTweenUIAnimation((rev) =>
             {
-                rect.localRotation = startRot;
+                Quaternion from = rev ? endRot : startRot;
+                Quaternion end  = rev ? startRot : endRot;
+                rect.localRotation = from;
                 Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
                 if (delay > 0f) seq.ChainDelay(delay);
-                seq.Chain(Tween.LocalRotation(rect, startRot, endRot, ts));
+                seq.Chain(Tween.LocalRotation(rect, from, end, ts));
                 return seq;
             }, delay + effect.Duration);
         }
@@ -134,29 +145,32 @@ namespace Clouds.UI.Animation
             int   cycles      = Cycles(effect);
             PTCycleMode cm    = MapCycleMode(effect.LoopType);
 
-            return new PrimeTweenUIAnimation(() =>
+            return new PrimeTweenUIAnimation((rev) =>
             {
-                rect.localScale = scaleFrom;
+                Vector3 from = rev ? scaleTo : scaleFrom;
+                Vector3 end  = rev ? scaleFrom : scaleTo;
+                rect.localScale = from;
                 Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
                 if (delay > 0f) seq.ChainDelay(delay);
-                seq.Chain(Tween.Scale(rect, scaleFrom, scaleTo, ts));
+                seq.Chain(Tween.Scale(rect, from, end, ts));
                 return seq;
             }, delay + effect.Duration);
         }
 
         public IUIAnimation CreateShake(RectTransform rect, UIEffectData effect, IUISetData data = null, bool ignoreTimeScale = false)
         {
-            float strength    = effect.ShakeStrength;
-            int   vibrato     = effect.ShakeVibrato;
-            float duration    = effect.Duration;
-            float delay       = effect.Delay;
-            int   cycles      = Cycles(effect);
-            PTCycleMode cm    = MapCycleMode(effect.LoopType);
-            bool shakePos     = effect.ShakePosition;
-            bool shakeRot     = effect.ShakeRotation;
-            bool shakeScale   = effect.ShakeScale;
+            float strength  = effect.ShakeStrength;
+            int   vibrato   = effect.ShakeVibrato;
+            float duration  = effect.Duration;
+            float delay     = effect.Delay;
+            int   cycles    = Cycles(effect);
+            PTCycleMode cm  = MapCycleMode(effect.LoopType);
+            bool shakePos   = effect.ShakePosition;
+            bool shakeRot   = effect.ShakeRotation;
+            bool shakeScale = effect.ShakeScale;
 
-            return new PrimeTweenUIAnimation(() =>
+            // Shake has no meaningful "from/to" — plays the same in both directions
+            return new PrimeTweenUIAnimation((_rev) =>
             {
                 Vector3 strVec = new Vector3(strength, strength, 0f);
                 Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
@@ -183,7 +197,8 @@ namespace Clouds.UI.Animation
             bool punchRot     = effect.PunchRotation;
             bool punchScale   = effect.PunchScale;
 
-            return new PrimeTweenUIAnimation(() =>
+            // Punch returns to origin — same in both directions
+            return new PrimeTweenUIAnimation((_rev) =>
             {
                 Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
                 if (delay > 0f) seq.ChainDelay(delay);
@@ -200,19 +215,21 @@ namespace Clouds.UI.Animation
         {
             if (canvas == null && data != null) canvas = data.UIObj.GetComponent<CanvasGroup>();
             if (canvas == null && data != null) canvas = data.UIObj.AddComponent<CanvasGroup>();
-            float from      = effect.FadeFrom;
-            float to        = effect.FadeTo;
+            float fadeFrom   = effect.FadeFrom;
+            float fadeTo     = effect.FadeTo;
             TweenSettings ts = TS(effect);
-            float delay     = effect.Delay;
-            int   cycles    = Cycles(effect);
-            PTCycleMode cm  = MapCycleMode(effect.LoopType);
+            float delay      = effect.Delay;
+            int   cycles     = Cycles(effect);
+            PTCycleMode cm   = MapCycleMode(effect.LoopType);
 
-            return new PrimeTweenUIAnimation(() =>
+            return new PrimeTweenUIAnimation((rev) =>
             {
+                float from = rev ? fadeTo : fadeFrom;
+                float end  = rev ? fadeFrom : fadeTo;
                 canvas.alpha = from;
                 Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
                 if (delay > 0f) seq.ChainDelay(delay);
-                seq.Chain(Tween.Alpha(canvas, from, to, ts));
+                seq.Chain(Tween.Alpha(canvas, from, end, ts));
                 return seq;
             }, delay + effect.Duration);
         }
@@ -221,22 +238,24 @@ namespace Clouds.UI.Animation
         {
             if (graphic == null && data != null) graphic = data.UIObj.GetComponent<Graphic>();
             if (graphic == null)
-                return new PrimeTweenUIAnimation(() => Sequence.Create(), 0f);
+                return new PrimeTweenUIAnimation((_rev) => Sequence.Create(), 0f);
 
-            Color from      = effect.ColorFrom;
-            Color to        = effect.ColorTo;
+            Color colorFrom  = effect.ColorFrom;
+            Color colorTo    = effect.ColorTo;
             TweenSettings ts = TS(effect);
-            float delay     = effect.Delay;
-            int   cycles    = Cycles(effect);
-            PTCycleMode cm  = MapCycleMode(effect.LoopType);
-            Graphic g       = graphic;
+            float delay      = effect.Delay;
+            int   cycles     = Cycles(effect);
+            PTCycleMode cm   = MapCycleMode(effect.LoopType);
+            Graphic g        = graphic;
 
-            return new PrimeTweenUIAnimation(() =>
+            return new PrimeTweenUIAnimation((rev) =>
             {
+                Color from = rev ? colorTo : colorFrom;
+                Color end  = rev ? colorFrom : colorTo;
                 g.color = from;
                 Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
                 if (delay > 0f) seq.ChainDelay(delay);
-                seq.Chain(Tween.Color(g, from, to, ts));
+                seq.Chain(Tween.Color(g, from, end, ts));
                 return seq;
             }, delay + effect.Duration);
         }

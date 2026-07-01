@@ -35,6 +35,9 @@ public class TweenCUIAnimation : MyBehaviour, IUIAnimation
     public event Action OnComplete;
     public event Action OnStart;
 
+    private int  _completedLoops;
+    private bool _isReverseCycle;
+
     protected override void Awake()
     {
         base.Awake();
@@ -45,9 +48,44 @@ public class TweenCUIAnimation : MyBehaviour, IUIAnimation
     public void Play()
     {
         if (_animations.Count == 0) return;
-        HookOneShot(_animations[0],   isStart: true,  () => OnStart?.Invoke());
-        HookOneShot(_animations[^1],  isStart: false, () => OnComplete?.Invoke());
-        foreach (var anim in _animations) anim.Restart();
+        _completedLoops  = 0;
+        _isReverseCycle  = false;
+        HookOneShot(_animations[0], isStart: true, () => OnStart?.Invoke());
+        PlayCycle();
+    }
+
+    private void PlayCycle()
+    {
+        HookOneShot(_animations[^1], isStart: false, OnCycleComplete);
+        if (_isReverseCycle)
+            foreach (var anim in _animations) anim.PlayReverse();
+        else
+            foreach (var anim in _animations) anim.Restart();
+    }
+
+    private void OnCycleComplete()
+    {
+        _completedLoops++;
+        bool shouldLoop = UIAnimationData != null && UIAnimationData.Loop &&
+                          (UIAnimationData.LoopCount <= 0 || _completedLoops < UIAnimationData.LoopCount);
+
+        if (shouldLoop)
+        {
+            if (UIAnimationData.LoopMode == LoopType.Yoyo) _isReverseCycle = !_isReverseCycle;
+            PlayCycle();
+        }
+        else
+            OnComplete?.Invoke();
+    }
+
+    public void PlayReverse()
+    {
+        if (_animations.Count == 0) return;
+        _completedLoops = 0;
+        _isReverseCycle = true;
+        HookOneShot(_animations[0],  isStart: true,  () => OnStart?.Invoke());
+        HookOneShot(_animations[^1], isStart: false, () => OnComplete?.Invoke());
+        foreach (var anim in _animations) anim.PlayReverse();
     }
 
     public void Stop()

@@ -13,10 +13,44 @@ MonoBehaviour:
   m_Name: BackFadein
   m_EditorClassIdentifier: CloudsAssembly::UIAnimationData
   Effects:
-  - type: 0
+  - type: 2
     MoveType: 2
     Offset: {x: 0, y: 0, z: 0}
     RotateTo: {x: 0, y: 0, z: 0}
+    ScaleFrom: {x: 0, y: 0, z: 0}
+    ScaleTo: {x: 1, y: 1, z: 1}
+    ShakePosition: 0
+    ShakeRotation: 0
+    ShakeScale: 0
+    ShakeStrength: 0
+    ShakeRandomness: 0
+    ShakeVibrato: 0
+    PunchPosition: 0
+    PunchRotation: 0
+    PunchScale: 0
+    PunchDirection: {x: 0, y: 0}
+    PunchVibrato: 0
+    PunchElasticity: 0
+    FadeFrom: 0
+    FadeTo: 0
+    ColorFrom: {r: 0, g: 0, b: 0, a: 0}
+    ColorTo: {r: 0, g: 0, b: 0, a: 0}
+    Delay: 0
+    Duration: 1
+    EaseType: 0
+    Curve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Loop: 0
+    LoopType: 1
+    LoopCount: 1
+  - type: 1
+    MoveType: 0
+    Offset: {x: 0, y: 0, z: 0}
+    RotateTo: {x: 0, y: 0, z: -180}
     ScaleFrom: {x: 0, y: 0, z: 0}
     ScaleTo: {x: 0, y: 0, z: 0}
     ShakePosition: 0
@@ -36,7 +70,7 @@ MonoBehaviour:
     ColorFrom: {r: 0, g: 0, b: 0, a: 0}
     ColorTo: {r: 0, g: 0, b: 0, a: 0}
     Delay: 0
-    Duration: 0.2
+    Duration: 1
     EaseType: 0
     Curve:
       serializedVersion: 2
@@ -45,5 +79,8 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     Loop: 0
-    LoopType: 0
-    LoopCount: 0
+    LoopType: 1
+    LoopCount: 1
+  Loop: 1
+  LoopMode: 1
+  LoopCount: 2
