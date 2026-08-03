@@ -112,6 +112,7 @@ Naming convention (enforced, not just a suggestion):
 
 - `InitializeAsync()` calls `DataService.PreloadAll()` as its one ordered step today — this eagerly loads every `Repository<T>` for every concrete `DynamicData` subclass in the project (see Repository\<T\> below) before `Start()` finishes, instead of leaving the first load to happen lazily/silently whenever gameplay code first touches it.
 - Override `InitializeAsync()` in a game-specific bootstrap to add further ordered async steps *after* calling `base.InitializeAsync()` (config load, backend auth, …), mirroring an `AppBootstrap` → `GameBootFlow` split for larger projects.
+- Once `InitializeAsync()` completes, `Start()` calls `LoadNextScene()` (virtual, overridable), which loads `SceneManager.GetActiveScene().buildIndex + 1` — the scene must sit in Build Settings with a real "next" scene after it, or it logs a warning and stays put.
 
 ### Messaging — SignalBus
 
