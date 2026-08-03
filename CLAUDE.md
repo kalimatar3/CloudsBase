@@ -110,8 +110,8 @@ Naming convention (enforced, not just a suggestion):
 
 `Assets/Clouds/Clouds.Manager/Bootstrap.cs` — single MonoBehaviour entry point for installing services at startup.
 
-- The framework's own services are stateless/lazy and need no explicit init step, so the base `InitializeAsync()` is a no-op.
-- Override `InitializeAsync()` in a game-specific bootstrap to add ordered async steps (config load, backend auth, player data load, …), mirroring an `AppBootstrap` → `GameBootFlow` split for larger projects.
+- `InitializeAsync()` calls `DataService.PreloadAll()` as its one ordered step today — this eagerly loads every `Repository<T>` for every concrete `DynamicData` subclass in the project (see Repository\<T\> below) before `Start()` finishes, instead of leaving the first load to happen lazily/silently whenever gameplay code first touches it.
+- Override `InitializeAsync()` in a game-specific bootstrap to add further ordered async steps *after* calling `base.InitializeAsync()` (config load, backend auth, …), mirroring an `AppBootstrap` → `GameBootFlow` split for larger projects.
 
 ### Messaging — SignalBus
 
@@ -218,7 +218,9 @@ bool loaded = Repository<PlayerData>.IsLoaded;
 
 - `T` must be `DynamicData, new()` — a concrete data class needs its own public parameterless constructor even though `DynamicData`'s own constructor requires a name (chain it: `public PlayerData() : base("PlayerData") { }`).
 - Static fields are per-closed-generic-type (`Repository<PlayerData>` and `Repository<SettingData>` don't share state), which also means it has **no** domain-reload reset hook — `[RuntimeInitializeOnLoadMethod]` can't target an open generic. This is a known, accepted limitation, not an oversight.
-- `DataService` (`Clouds.Manager/DataService.cs`) — static extension point for game-specific aggregation, e.g. `public static PlayerData Player => Repository<PlayerData>.Data;`. Empty in the base framework by design.
+- `DataService` (`Clouds.Manager/DataService.cs`) — static extension point for game-specific aggregation, e.g. `public static PlayerData Player => Repository<PlayerData>.Data;`.
+  - `DataService.PreloadAll()` — reflection-scans loaded assemblies for every concrete `DynamicData` subclass and calls `Repository<T>.Load()` on each via `MakeGenericType`. Adding a new data type anywhere in the project is automatically picked up — no manual registration in `DataService` or `Bootstrap`. Called once from `Bootstrap.InitializeAsync()`. A type without a public parameterless constructor is skipped with a logged error rather than throwing.
+  - No online/cloud loading (the reference template's `LoadOnline`/Firestore path) — out of scope, `LoadSaveService` is local-only by design.
 
 ### LoadSaveService — Local Storage Service
 
