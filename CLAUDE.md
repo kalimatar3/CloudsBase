@@ -17,6 +17,10 @@ This file provides coding guidance for AI agents working in this repository.
 
 The framework lives entirely under `Assets/Clouds/`. Game projects import or copy this folder and build on top of it.
 
+## Project Documentation
+
+Game-specific documentation (design, QA, art — context not derivable from code) lives in `DOCS/`, a sibling of `Assets/`. Read `DOCS/README.md` first — it indexes everything there — before answering questions about game design intent, QA acceptance criteria, or art direction. Load only the specific file the question needs, never the whole tree.
+
 ## Project Structure
 
 ```
