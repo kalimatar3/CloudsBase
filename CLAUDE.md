@@ -69,8 +69,8 @@ Assets that belong to the current game (not reusable across projects) live in to
 
 ```
 Assets/
-├── Game.Scripts/    # game-specific C# — subdivided by role like Assets/Clouds/ (Manager/, Editor/, and
-│                    #   Common/, Data/, Helper/, etc. as they're needed)
+├── Game.Scripts/    # game-specific C# — subdivided by role, folder = namespace like Assets/Clouds/:
+│                    #   Core/, Data/, Service/, Editor/ (add more, e.g. Common/, Helper/, as needed)
 ├── Game.Textures/   # art tied to this game (not referenced by any Clouds.Materials/)
 ├── Game.Models/
 ├── Game.Prefabs/
@@ -82,6 +82,14 @@ Assets/
 `Game.Materials/` and `Game.Shaders/` aren't present right now — everything currently in Materials/Shaders is reusable and lives in `Assets/Clouds/` instead. Recreate a `Game.Materials/`/`Game.Shaders/` folder only for a one-off material/shader tied specifically to this game (e.g. baking in a texture from `Game.Textures/`).
 
 When adding a new game-specific type-folder, prefix it `Game.` (e.g. `Game.Audio/`) rather than adding an unprefixed folder at `Assets/` root, so game content stays visually distinct from `Assets/Clouds/` and from vendored third-party packages (`Plugins/`, `Spine/`, `AllPakage/`, etc., which keep their own names and are never renamed to `Game.*`). `Assets/Resources/` keeps its literal name since Unity resolves `Resources.Load` by that exact folder name.
+
+### Game.Scripts Namespace Convention
+
+Mirrors the `Clouds.*` convention: every script in `Game.Scripts/` sits one level under `Game`, matching its subfolder — `Game.Core`, `Game.Data`, `Game.Service`. `Editor/` keeps its literal folder name (player-build exclusion) and is namespaced `Game.Editor`, same exception as `Clouds.Editor`.
+
+- **`Core/`** (`Game.Core`) — game-specific system scripts: core gameplay coordinators, game-specific `Bootstrap` overrides, anything orchestrating game systems that isn't reusable across projects. Still follows the `...Manager`/`...Service` suffix rule (see Static Services vs. MonoBehaviour Managers below) for whether a given class is scene-bound or static.
+- **`Data/`** (`Game.Data`) — game-specific `DynamicData` subclasses (see Repository\<T\> below), e.g. `PlayerData`, `SettingData`.
+- **`Service/`** (`Game.Service`) — game-specific static `...Service` classes (no scene presence), same convention as the services in `Clouds.Manager`.
 
 ## Runtime Architecture
 
