@@ -5,8 +5,8 @@ using UnityEngine.SceneManagement;
 namespace Clouds.Manager
 {
     // Single entry point that installs framework services at startup. Override InitializeAsync() in a
-    // game-specific bootstrap to add further ordered async steps (config load, backend auth, ...) after
-    // calling base.InitializeAsync(), matching AppBootstrap -> GameBootFlow from the reference architecture.
+    // game-specific bootstrap to add further ordered async steps (backend auth, ...) after calling
+    // base.InitializeAsync(), matching AppBootstrap -> GameBootFlow from the reference architecture.
     // Once InitializeAsync() completes, loads the next scene by Build Settings index.
     public class Bootstrap : MonoBehaviour
     {
@@ -21,10 +21,10 @@ namespace Clouds.Manager
             LoadNextScene();
         }
 
-        protected virtual UniTask InitializeAsync()
+        protected virtual async UniTask InitializeAsync()
         {
             DataService.PreloadAll();
-            return UniTask.CompletedTask;
+            await ConfigLoader.LoadAllAsync();
         }
 
         protected virtual void LoadNextScene()

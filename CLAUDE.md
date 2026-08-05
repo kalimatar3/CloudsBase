@@ -110,8 +110,8 @@ Naming convention (enforced, not just a suggestion):
 
 `Assets/Clouds/Clouds.Manager/Bootstrap.cs` — single MonoBehaviour entry point for installing services at startup.
 
-- `InitializeAsync()` calls `DataService.PreloadAll()` as its one ordered step today — this eagerly loads every `Repository<T>` for every concrete `DynamicData` subclass in the project (see Repository\<T\> below) before `Start()` finishes, instead of leaving the first load to happen lazily/silently whenever gameplay code first touches it.
-- Override `InitializeAsync()` in a game-specific bootstrap to add further ordered async steps *after* calling `base.InitializeAsync()` (config load, backend auth, …), mirroring an `AppBootstrap` → `GameBootFlow` split for larger projects.
+- `InitializeAsync()` runs two ordered steps today: `DataService.PreloadAll()` — eagerly loads every `Repository<T>` for every concrete `DynamicData` subclass in the project (see Repository\<T\> below) — then `await ConfigLoader.LoadAllAsync()` — loads every Addressables-labeled config `ScriptableObject` into `ConfigService`. Both happen before `Start()` finishes, instead of leaving the first access to happen lazily/silently whenever gameplay code first touches it.
+- Override `InitializeAsync()` in a game-specific bootstrap to add further ordered async steps *after* calling `base.InitializeAsync()` (backend auth, …), mirroring an `AppBootstrap` → `GameBootFlow` split for larger projects.
 - Once `InitializeAsync()` completes, `Start()` calls `LoadNextScene()` (virtual, overridable), which loads `SceneManager.GetActiveScene().buildIndex + 1` — the scene must sit in Build Settings with a real "next" scene after it, or it logs a warning and stays put.
 
 ### Messaging — SignalBus
@@ -237,6 +237,18 @@ string json = LoadSaveService.DatatoJsonConvert(obj); // Newtonsoft.Json
 ```
 
 `Repository<T>` is built directly on `SaveDatatofile`/`LoadDataFromFile`.
+
+### ConfigService & ConfigLoader
+
+`Assets/Clouds/Clouds.Manager/ConfigService.cs` + `ConfigLoader.cs` — static registry for Addressables-loaded config `ScriptableObject`s (game balance/tuning assets, as opposed to `Repository<T>`'s per-player save data).
+
+```csharp
+T config = ConfigService.GetConfig<T>();   // T : ScriptableObject — throws if not yet loaded
+```
+
+- `ConfigLoader.LoadAllAsync()` — loads every `ScriptableObject` addressable under the `"Game.Config"` label and registers each by concrete type into `ConfigService`. Called once from `Bootstrap.InitializeAsync()`, after `DataService.PreloadAll()`.
+- Registry is keyed by concrete type (`typeof(T)`), so only one asset per config type may be loaded at a time.
+- `ConfigService.GetConfig<T>()` throws `InvalidOperationException` if `T` wasn't loaded — call `ConfigLoader.LoadAllAsync()` first (Bootstrap already does this before scene load).
 
 ### DynamicData & SerializableDictionary
 
