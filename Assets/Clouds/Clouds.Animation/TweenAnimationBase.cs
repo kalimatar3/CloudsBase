@@ -60,7 +60,7 @@ namespace Clouds.Animation
         [Button(ButtonSizes.Large)]
         public void Play()
         {
-            if (_animations.Count == 0) return;
+            if (_animations.Count == 0) { ReportEmpty(); return; }
             _completedLoops  = 0;
             _isReverseCycle  = false;
             HookOneShot(_animations[0], isStart: true, () => OnStart?.Invoke());
@@ -93,7 +93,7 @@ namespace Clouds.Animation
 
         public void PlayReverse()
         {
-            if (_animations.Count == 0) return;
+            if (_animations.Count == 0) { ReportEmpty(); return; }
             _completedLoops = 0;
             _isReverseCycle = true;
             HookOneShot(_animations[0],  isStart: true,  () => OnStart?.Invoke());
@@ -107,6 +107,15 @@ namespace Clouds.Animation
         }
 
         public void Restart() => Play();
+
+        // Không có tween nào để chạy thì vẫn phải bắn đủ cặp event, giống UIAnimationContainer.Play()
+        // khi key không tồn tại. Im lặng bỏ qua sẽ làm mọi await trên animation này treo vĩnh viễn, và
+        // callback onComplete của caller cũng không bao giờ chạy.
+        private void ReportEmpty()
+        {
+            OnStart?.Invoke();
+            OnComplete?.Invoke();
+        }
 
         protected static void HookOneShot(IUIAnimation target, bool isStart, Action callback)
         {
