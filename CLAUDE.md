@@ -75,6 +75,9 @@ Assets/
 ├── Game.Scripts/    # game-specific C# — subdivided by role, folder = namespace like Assets/Clouds/:
 │                    #   Core/, Data/, Service/, Editor/ (add more, e.g. Common/, Helper/, as needed)
 ├── Game.Config/     # config ScriptableObject assets loaded at runtime via ConfigService (see below)
+├── Game.Animation/  # UIAnimationData assets for world-space effects (TweenWorldAnimation).
+│                    #   UI presets stay in Clouds.UI/Animation/AnimationPresets/ — the two are not
+│                    #   interchangeable: UI offsets are canvas pixels, world offsets are metres
 ├── Game.Textures/   # art tied to this game (not referenced by any Clouds.Materials/)
 ├── Game.Models/
 ├── Game.Prefabs/
