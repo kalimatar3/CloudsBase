@@ -25,6 +25,8 @@ Game-specific documentation (design, QA, art — context not derivable from code
 
 ```
 Assets/Clouds/
+├── Clouds.Animation/ # TweenAnimationBase (khung loop/callback dùng chung cho UI + world),
+│                     #   IWorldAnimationFactory, DOTweenWorldAnimationFactory, TweenWorldAnimation
 ├── Clouds.Common/    # InterfaceReference<T>, Tools, ComponentExtensions, DataHelper, Serializable2DArray (utilities)
 ├── Clouds.Data/      # DynamicData, SerializableDictionary, ExcelReader
 ├── Editor/           # Custom editors + property drawers: DOTweenPreviewer, SerializableDictionaryDrawer,
@@ -54,11 +56,12 @@ Each folder is named after the namespace it holds (`Clouds.Common/` ↔ `namespa
 
 ### Namespace Convention
 
-Every script sits in exactly one namespace, matching its **logical component** — not necessarily its physical folder. All namespaces are flat, one level under `Clouds`: `Clouds.Common`, `Clouds.Data`, `Clouds.Editor`, `Clouds.Manager`, `Clouds.Physics`, `Clouds.Signal`, `Clouds.Singleton`, `Clouds.Spawner`, `Clouds.State`, `Clouds.Strategy`, `Clouds.Timeline`, `Clouds.UI`.
+Every script sits in exactly one namespace, matching its **logical component** — not necessarily its physical folder. All namespaces are flat, one level under `Clouds`: `Clouds.Animation`, `Clouds.Common`, `Clouds.Data`, `Clouds.Editor`, `Clouds.Manager`, `Clouds.Physics`, `Clouds.Signal`, `Clouds.Singleton`, `Clouds.Spawner`, `Clouds.State`, `Clouds.Strategy`, `Clouds.Timeline`, `Clouds.UI`.
 
 - Physical location = compile/organization boundary (e.g. `Editor/` stays a real folder so Unity excludes it from player builds). Namespace = ownership. A property drawer living in `Editor/` for a `Common/` type is `namespace Clouds.Common`, not `Clouds.Editor` — `Clouds.Editor` is reserved for tools with no single owning component (`MissingScriptFinder`, `TMPFontChecker`).
 - `Clouds.UI` is intentionally flat — it does not split into `Clouds.UI.Animation`/`.Editor`/`.Settings` sub-namespaces. Everything UI-related (runtime, data, and its editor tooling) is one namespace.
-- **Gotcha:** `Clouds.Physics` and `Clouds.Singleton` share their last segment with a type inside them (`SetAllRigidbody`'s namespace vs. `UnityEngine.Physics`, `Singleton<T>` itself). Inside `Clouds.Physics`, always fully-qualify `UnityEngine.Physics` (e.g. `UnityEngine.Physics.gravity`) — the bare name resolves to the namespace, not the class.
+- **Gotcha:** `Clouds.Physics`, `Clouds.Singleton` and `Clouds.Animation` share their last segment with a type (`UnityEngine.Physics`, `Singleton<T>` itself, `UnityEngine.Animation`). Inside those namespaces, always fully-qualify the type (e.g. `UnityEngine.Physics.gravity`, `UnityEngine.Animation`) — the bare name resolves to the namespace, not the class.
+- **Gotcha:** `Clouds.Animation` currently `using`s `Clouds.UI` for the shared animation contract (`IUIAnimation`, `UIEffectData`, `UIAnimationData`), while `Clouds.UI.TweenCUIAnimation` extends `Clouds.Animation.TweenAnimationBase`. The *type* graph is acyclic, only the namespace labels point both ways — a deliberate staging state. The fix is to move that contract down into `Clouds.Animation` and rename it neutrally (`ITweenAnimation`, `EffectData`, `AnimationData`); do that as one pass, not piecemeal.
 - When adding a new script, `using` the component namespace(s) it depends on rather than duplicating types across namespaces.
 
 `Assets/Clouds/` holds framework **code**, plus visual assets that are genuinely reusable across games: `Clouds.UI/AnimationPresets/`, `Resources/UISetting.asset`, `Clouds.Materials/`, `Clouds.Shaders/`, and the small set of `Clouds.Textures/` those materials depend on. It does **not** hold one-off game content — no Models/Prefabs/Scenes, and no Materials/Textures tied to a specific game's art (e.g. a logo texture). When adding a new Material to `Clouds.Materials/`, check what it references: if it bakes in a texture, that texture belongs in `Clouds.Textures/` too, or the Material doesn't belong here.
