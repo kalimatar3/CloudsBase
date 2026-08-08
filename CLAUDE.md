@@ -71,6 +71,7 @@ Assets that belong to the current game (not reusable across projects) live in to
 Assets/
 ├── Game.Scripts/    # game-specific C# — subdivided by role, folder = namespace like Assets/Clouds/:
 │                    #   Core/, Data/, Service/, Editor/ (add more, e.g. Common/, Helper/, as needed)
+├── Game.Config/     # config ScriptableObject assets loaded at runtime via ConfigService (see below)
 ├── Game.Textures/   # art tied to this game (not referenced by any Clouds.Materials/)
 ├── Game.Models/
 ├── Game.Prefabs/
@@ -78,6 +79,8 @@ Assets/
 ├── Game.Settings/   # URP pipeline/quality/volume assets
 └── Game.GUI/         # 2D UI art (menus, localized textures)
 ```
+
+`Game.Config/` holds the balance/tuning `ScriptableObject` assets that `ConfigService` serves — every asset in it must be marked **Addressable** with the **`Game.Config`** label, since that label is what `ConfigLoader.LoadAllAsync()` scans. Keep them out of `Game.Settings/`, which is for Unity's own URP pipeline/quality assets (loaded by Unity, not by `ConfigService`). Config assets are *not* serialized onto scene GameObjects — consumers pull them via `ConfigService.GetConfig<T>()` so one asset serves the whole game instead of each scene pointing at a possibly-different one.
 
 `Game.Materials/` and `Game.Shaders/` aren't present right now — everything currently in Materials/Shaders is reusable and lives in `Assets/Clouds/` instead. Recreate a `Game.Materials/`/`Game.Shaders/` folder only for a one-off material/shader tied specifically to this game (e.g. baking in a texture from `Game.Textures/`).
 
@@ -113,10 +116,16 @@ Mirrors the `Clouds.*` convention: every script in `Game.Scripts/` sits one leve
 ### Static Services vs. MonoBehaviour Managers
 
 Naming convention (enforced, not just a suggestion):
-- **`...Manager`** — reserved for **MonoBehaviour**-derived classes that must live on a scene GameObject (e.g. because they need `Awake`/`Update`, Inspector-assigned references, or `Singleton<T>`).
+- **`...Manager`** — reserved for **MonoBehaviour**-derived classes that must live on a scene GameObject (e.g. because they need `Awake`/`Update`, Inspector-assigned references). This does **not** automatically mean `Singleton<T>` — see below.
 - **`...Service`** — static classes with no scene presence (`LoadSaveService`, `DataService`, `PopupService`, `PoolService`).
 - **`...Repository<T>`** (or bare `Repository<T>`) — static, generic-over-data-type flavor of a service (`Repository<T>`).
 - Never name a static class `...Manager`, and never name a MonoBehaviour `...Service`.
+
+`Singleton<T>` is a third, narrower case, not a synonym for `...Manager`. Use it only when **both** hold:
+1. The class must live on a scene GameObject (Inspector wiring, `Awake`/`OnEnable`/`Update`, …), **and**
+2. Other code actually calls `TheClass.Instance` from outside the class itself.
+
+If (1) is true but (2) isn't — nothing outside the class ever reads `.Instance` — it's a plain `MonoBehaviour`, not a `Singleton<T>`; don't inherit `Singleton<T>` "just in case" a future caller might need it. If (1) is false — the class is pull-based/stateless and only carries an optional Inspector override — it belongs as a static `...Service`, not a `MonoBehaviour` at all. Default to minimizing `Singleton<T>` use: it's the exception, not the fallback, for anything with a scene-bound `...Manager` name.
 
 ### Bootstrap
 
@@ -258,8 +267,9 @@ string json = LoadSaveService.DatatoJsonConvert(obj); // Newtonsoft.Json
 T config = ConfigService.GetConfig<T>();   // T : ScriptableObject — throws if not yet loaded
 ```
 
-- `ConfigLoader.LoadAllAsync()` — loads every `ScriptableObject` addressable under the `"Game.Config"` label and registers each by concrete type into `ConfigService`. Called once from `Bootstrap.InitializeAsync()`, after `DataService.PreloadAll()`.
-- Registry is keyed by concrete type (`typeof(T)`), so only one asset per config type may be loaded at a time.
+- `ConfigLoader.LoadAllAsync()` — loads every `ScriptableObject` addressable under the `"Game.Config"` label (`ConfigLoader.LABEL`) and registers each by concrete type into `ConfigService`. Called once from `Bootstrap.InitializeAsync()`, after `DataService.PreloadAll()`. Assets live in `Assets/Game.Config/` (see Game.\* Project Folders above).
+- **Adding a config is a drag-and-drop, not a labeling chore:** put the asset in the Addressables group named `Game.Config` and `ConfigGroupLabeler` (see Editor Tools) applies the label for you. Addressables cannot query by group at runtime — only address/label/`AssetReference`/GUID are runtime keys, and group names don't survive the build — so the label is still the real mechanism; the group is just the authoring surface kept in sync with it.
+- Registry is keyed by concrete type (`typeof(T)`), so only one asset per config type may be loaded at a time. Two assets of the *same* type both labeled means the later load silently wins — model per-variant tuning as a runtime parameter instead of as multiple assets of one config type.
 - `ConfigService.GetConfig<T>()` throws `InvalidOperationException` if `T` wasn't loaded — call `ConfigLoader.LoadAllAsync()` first (Bootstrap already does this before scene load).
 
 ### DynamicData & SerializableDictionary
@@ -325,6 +335,7 @@ new DeSpawnbyEvent(despawnable, ref myAction).Excute();   // when action fires
 |---|---|---|
 | `UIAnimationContainerEditor` | `Editor/` | Play/Stop per key + edit-mode DOTween preview |
 | `DOTweenPreviewer` | `Editor/` | Wraps `DOTweenEditorPreview` for edit-mode animation preview |
+| `ConfigGroupLabeler` | `Editor/` | Keeps the `Game.Config` label in sync with membership of the Addressables group of the same name (both directions), so `ConfigService` registration follows the group. `Tools > Clouds > Sync Config Group Labels` forces a pass |
 | `MissingScriptFinder` | `Editor/` | Finds GameObjects with missing script references |
 | `TMPFontChecker` | `Editor/` | Validates TextMeshPro font asset references |
 | `Show2DArrayDrawer` | `Editor/` | PropertyDrawer for `Serializable2DArray<T>` |
@@ -348,7 +359,8 @@ var rb = gameObject.GetOrAddComponent<Rigidbody>();
 ## Coding Guidelines
 
 - **Base class:** Extend `MyBehaviour`, override `LoadComponents()` to wire components. Never call `GetComponent` in `Update`.
-- **Singletons vs. Services:** Use `Singleton<T>` only for MonoBehaviours that truly must live on a scene GameObject. If a system has no scene dependency, make it a static `...Service`/`...Repository<T>` instead (see Static Services vs. MonoBehaviour Managers above) — do not singleton-ify UI panels, gameplay objects, or anything that could be plain static state.
+- **Comments:** Written in Vietnamese (tiếng Việt), not English. Same rule as always for *when* to comment — only when the WHY is non-obvious — just the language changes.
+- **Singletons vs. Services:** Use `Singleton<T>` only for MonoBehaviours that truly must live on a scene GameObject *and* whose `.Instance` is actually consumed by other code (see Static Services vs. MonoBehaviour Managers above for the full two-part test). If a system has no scene dependency, make it a static `...Service`/`...Repository<T>` instead — do not singleton-ify UI panels, gameplay objects, or anything that could be plain static state. Prefer minimizing `Singleton<T>` generally: it's a narrower case than `...Manager`, not the default for every scene-bound class.
 - **Messaging:** Use `SignalBus` for all cross-system communication. Use scoped `SignalBus.Scope<T>()` when signals should be contained to a specific panel or subsystem. Never call panel methods directly from button code.
 - **Animation:** Attach `UIAnimationContainer` to the GameObject, assign `UIAnimationData` assets from `Assets/Clouds/Clouds.UI/AnimationPresets/`. Call `Play(key)` — do not create DOTween sequences manually outside the animation system.
 - **DOTween:** Do not use DOTween directly for UI animations. Route through `UIAnimationContainer` → `DOTweenAnimationFactory`. Direct DOTween use is acceptable only for gameplay (non-UI) tweens.

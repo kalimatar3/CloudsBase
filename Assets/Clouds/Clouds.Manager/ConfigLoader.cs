@@ -7,7 +7,9 @@ namespace Clouds.Manager
 {
     public static class ConfigLoader
     {
-        private const string LABEL = "Game.Config";
+        // Public so the editor tooling that keeps this label in sync with the Addressables group
+        // (ConfigGroupLabeler) reads the same constant instead of hardcoding a copy that can drift.
+        public const string LABEL = "Game.Config";
 
         public static async UniTask LoadAllAsync()
         {
