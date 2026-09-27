@@ -18,10 +18,18 @@ namespace Clouds.Animation
         // dời field lên lớp cha là mọi prefab đang gán data sẽ về null.
         public UIAnimationData UIAnimationData;
 
+        // Mặc định false để giữ nguyên hành vi cũ. Animation của popup nên bật: popup hay mở đúng lúc
+        // game pause (timeScale = 0), tween theo thời gian thường sẽ đứng im và await nó treo luôn.
+        [Tooltip("Chạy theo thời gian thực, không bị Time.timeScale ảnh hưởng (bật cho UI mở khi pause).")]
+        public bool IgnoreTimeScale;
+
         /// <summary>Trạng thái target trước lần phát gần nhất, do AnimationService ghi. Xem Restore().</summary>
         [NonSerialized] public AnimationSnapshot Snapshot;
 
         protected readonly List<IUIAnimation> _animations = new();
+
+        /// <summary>Tween đã dựng (dùng bởi editor preview, nơi cần chuẩn bị từng tween một).</summary>
+        public IReadOnlyList<IUIAnimation> Animations => _animations;
 
         public bool IsPlaying
         {

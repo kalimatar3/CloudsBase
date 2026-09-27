@@ -105,7 +105,7 @@ namespace Clouds.UI
                 Vector2 from = rev ? t : s;
                 Vector2 end  = rev ? s : t;
                 rect.anchoredPosition = from;
-                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
+                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm, useUnscaledTime: ignoreTimeScale);
                 if (delay > 0f) seq.ChainDelay(delay);
                 seq.Chain(Tween.UIAnchoredPosition(rect, from, end, ts));
                 return seq;
@@ -126,7 +126,7 @@ namespace Clouds.UI
                 Quaternion from = rev ? endRot : startRot;
                 Quaternion end  = rev ? startRot : endRot;
                 rect.localRotation = from;
-                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
+                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm, useUnscaledTime: ignoreTimeScale);
                 if (delay > 0f) seq.ChainDelay(delay);
                 seq.Chain(Tween.LocalRotation(rect, from, end, ts));
                 return seq;
@@ -156,7 +156,7 @@ namespace Clouds.UI
                 Vector3 from = rev ? scaleTo : captured;
                 Vector3 end  = rev ? captured : scaleTo;
                 rect.localScale = from;
-                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
+                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm, useUnscaledTime: ignoreTimeScale);
                 if (delay > 0f) seq.ChainDelay(delay);
                 seq.Chain(Tween.Scale(rect, from, end, ts));
                 return seq;
@@ -179,7 +179,7 @@ namespace Clouds.UI
             return new PrimeTweenUIAnimation((_rev) =>
             {
                 Vector3 strVec = new Vector3(strength, strength, 0f);
-                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
+                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm, useUnscaledTime: ignoreTimeScale);
                 if (delay > 0f) seq.ChainDelay(delay);
 
                 if      (shakePos)   seq.Chain(Tween.ShakeLocalPosition(rect, strVec, duration, vibrato));
@@ -206,7 +206,7 @@ namespace Clouds.UI
             // Punch returns to origin — same in both directions
             return new PrimeTweenUIAnimation((_rev) =>
             {
-                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
+                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm, useUnscaledTime: ignoreTimeScale);
                 if (delay > 0f) seq.ChainDelay(delay);
 
                 if      (punchPos)   seq.Chain(Tween.PunchLocalPosition(rect, direction, duration, vibrato));
@@ -237,7 +237,7 @@ namespace Clouds.UI
                 float from = rev ? fadeTo : captured;
                 float end  = rev ? captured : fadeTo;
                 canvas.alpha = from;
-                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
+                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm, useUnscaledTime: ignoreTimeScale);
                 if (delay > 0f) seq.ChainDelay(delay);
                 seq.Chain(Tween.Alpha(canvas, from, end, ts));
                 return seq;
@@ -267,7 +267,7 @@ namespace Clouds.UI
                 Color from = rev ? colorTo : captured;
                 Color end  = rev ? captured : colorTo;
                 g.color = from;
-                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
+                Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm, useUnscaledTime: ignoreTimeScale);
                 if (delay > 0f) seq.ChainDelay(delay);
                 seq.Chain(Tween.Color(g, from, end, ts));
                 return seq;

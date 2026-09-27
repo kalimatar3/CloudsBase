@@ -145,25 +145,7 @@ namespace Clouds.UI
 
         private static List<IUIAnimation> BuildAnimations(
             UIAnimationData data, RectTransform rt, CanvasGroup cg, Graphic graphic)
-        {
-            var list = new List<IUIAnimation>();
-            foreach (var effect in data.Effects)
-            {
-                IUIAnimation anim = effect.type switch
-                {
-                    TRIGGEREFFECT.Move   => AnimationFactory.CreateMove(rt, effect),
-                    TRIGGEREFFECT.Rotate => AnimationFactory.CreateRotate(rt, effect),
-                    TRIGGEREFFECT.Scale  => AnimationFactory.CreateScale(rt, effect),
-                    TRIGGEREFFECT.Shake  => AnimationFactory.CreateShake(rt, effect),
-                    TRIGGEREFFECT.Punch  => AnimationFactory.CreatePunch(rt, effect),
-                    TRIGGEREFFECT.Fade   => cg      != null ? AnimationFactory.CreateFade(cg, effect)       : null,
-                    TRIGGEREFFECT.Color  => graphic != null ? AnimationFactory.CreateColor(graphic, effect) : null,
-                    _                    => null
-                };
-                if (anim != null) list.Add(anim);
-            }
-            return list;
-        }
+            => UIAnimationBuilder.Build(AnimationFactory, data, rt, cg, graphic);
 
         private static void HookOneShot(IUIAnimation target, bool isStart, Action callback)
         {

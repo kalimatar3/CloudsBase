@@ -35,13 +35,13 @@ namespace Clouds.Animation
             {
                 IUIAnimation anim = effect.type switch
                 {
-                    TRIGGEREFFECT.Move   => AnimationFactory.CreateMove(transform, effect),
-                    TRIGGEREFFECT.Rotate => AnimationFactory.CreateRotate(transform, effect),
-                    TRIGGEREFFECT.Scale  => AnimationFactory.CreateScale(transform, effect),
-                    TRIGGEREFFECT.Shake  => AnimationFactory.CreateShake(transform, effect),
-                    TRIGGEREFFECT.Punch  => AnimationFactory.CreatePunch(transform, effect),
-                    TRIGGEREFFECT.Fade   => targetRenderer != null ? AnimationFactory.CreateFade(targetRenderer, effect)  : null,
-                    TRIGGEREFFECT.Color  => targetRenderer != null ? AnimationFactory.CreateColor(targetRenderer, effect) : null,
+                    TRIGGEREFFECT.Move   => AnimationFactory.CreateMove(transform, effect, IgnoreTimeScale),
+                    TRIGGEREFFECT.Rotate => AnimationFactory.CreateRotate(transform, effect, IgnoreTimeScale),
+                    TRIGGEREFFECT.Scale  => AnimationFactory.CreateScale(transform, effect, IgnoreTimeScale),
+                    TRIGGEREFFECT.Shake  => AnimationFactory.CreateShake(transform, effect, IgnoreTimeScale),
+                    TRIGGEREFFECT.Punch  => AnimationFactory.CreatePunch(transform, effect, IgnoreTimeScale),
+                    TRIGGEREFFECT.Fade   => targetRenderer != null ? AnimationFactory.CreateFade(targetRenderer, effect, IgnoreTimeScale)  : null,
+                    TRIGGEREFFECT.Color  => targetRenderer != null ? AnimationFactory.CreateColor(targetRenderer, effect, IgnoreTimeScale) : null,
                     _                    => null
                 };
                 if (anim != null) _animations.Add(anim);
