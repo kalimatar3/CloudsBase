@@ -12,6 +12,14 @@ namespace Clouds.UI
     {
         public TRIGGEREFFECT type;
 
+        // Bỏ field From đã cấu hình, lấy giá trị đang có của target lúc BẮT ĐẦU PHÁT làm điểm xuất phát.
+        // Chỉ có nghĩa với 3 loại có cặp From/To tường minh — Move đã luôn chạy tương đối so với vị trí
+        // hiện tại, còn Rotate vốn đã chụp góc hiện tại làm mốc.
+        // PlayReverse() quay về đúng giá trị mà lần phát xuôi gần nhất đã chụp, không phải về ScaleFrom.
+        [ShowIf("@type == Clouds.UI.TRIGGEREFFECT.Scale || type == Clouds.UI.TRIGGEREFFECT.Fade || type == Clouds.UI.TRIGGEREFFECT.Color")]
+        [LabelText("From = current value"), LabelWidth(130)]
+        public bool FromCurrent;
+
         // ── Type-specific (hiện ngay sau khi chọn type) ──────────────────────
 
         [BoxGroup("Move")] [ShowIf("type", TRIGGEREFFECT.Move)]
@@ -22,7 +30,7 @@ namespace Clouds.UI
         [BoxGroup("Rotate")] [ShowIf("type", TRIGGEREFFECT.Rotate)]
         public Vector3 RotateTo;
 
-        [BoxGroup("Scale")] [ShowIf("type", TRIGGEREFFECT.Scale)]
+        [BoxGroup("Scale")] [ShowIf("type", TRIGGEREFFECT.Scale)] [HideIf("FromCurrent")]
         [HorizontalGroup("Scale/Range"), LabelText("From"), LabelWidth(36)] public Vector3 ScaleFrom;
         [BoxGroup("Scale")] [ShowIf("type", TRIGGEREFFECT.Scale)]
         [HorizontalGroup("Scale/Range"), LabelText("To"),   LabelWidth(22)] public Vector3 ScaleTo;
@@ -54,12 +62,12 @@ namespace Clouds.UI
         [BoxGroup("Punch")] [ShowIf("type", TRIGGEREFFECT.Punch)]
         [HorizontalGroup("Punch/Params"), LabelText("Elasticity"), LabelWidth(70)] public float PunchElasticity;
 
-        [BoxGroup("Fade")] [ShowIf("type", TRIGGEREFFECT.Fade)]
+        [BoxGroup("Fade")] [ShowIf("type", TRIGGEREFFECT.Fade)] [HideIf("FromCurrent")]
         [HorizontalGroup("Fade/Range"), LabelText("From"), LabelWidth(36), Range(0, 1)] public float FadeFrom;
         [BoxGroup("Fade")] [ShowIf("type", TRIGGEREFFECT.Fade)]
         [HorizontalGroup("Fade/Range"), LabelText("To"),   LabelWidth(22), Range(0, 1)] public float FadeTo;
 
-        [BoxGroup("Color")] [ShowIf("type", TRIGGEREFFECT.Color)]
+        [BoxGroup("Color")] [ShowIf("type", TRIGGEREFFECT.Color)] [HideIf("FromCurrent")]
         [HorizontalGroup("Color/Range"), LabelText("From"), LabelWidth(36)] public Color ColorFrom;
         [BoxGroup("Color")] [ShowIf("type", TRIGGEREFFECT.Color)]
         [HorizontalGroup("Color/Range"), LabelText("To"),   LabelWidth(22)] public Color ColorTo;
@@ -86,11 +94,11 @@ namespace Clouds.UI
         {
             TRIGGEREFFECT.Move   => $"[Move] {MoveType}  {Duration:0.#}s  {EaseType}",
             TRIGGEREFFECT.Rotate => $"[Rotate] z:{RotateTo.z:0}°  {Duration:0.#}s",
-            TRIGGEREFFECT.Scale  => $"[Scale] ({ScaleTo.x:0.#}, {ScaleTo.y:0.#})  {Duration:0.#}s",
+            TRIGGEREFFECT.Scale  => $"[Scale] {(FromCurrent ? "cur" : $"({ScaleFrom.x:0.#}, {ScaleFrom.y:0.#})")}→({ScaleTo.x:0.#}, {ScaleTo.y:0.#})  {Duration:0.#}s",
             TRIGGEREFFECT.Shake  => $"[Shake] str:{ShakeStrength:0.#}  {Duration:0.#}s",
             TRIGGEREFFECT.Punch  => $"[Punch] {PunchDirection}  {Duration:0.#}s",
-            TRIGGEREFFECT.Fade   => $"[Fade] {FadeFrom:0.#}→{FadeTo:0.#}  {Duration:0.#}s",
-            TRIGGEREFFECT.Color  => $"[Color] {Duration:0.#}s  {EaseType}",
+            TRIGGEREFFECT.Fade   => $"[Fade] {(FromCurrent ? "cur" : $"{FadeFrom:0.#}")}→{FadeTo:0.#}  {Duration:0.#}s",
+            TRIGGEREFFECT.Color  => $"[Color] {(FromCurrent ? "cur→ " : "")}{Duration:0.#}s  {EaseType}",
             _                    => type.ToString()
         };
     }

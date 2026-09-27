@@ -18,6 +18,9 @@ namespace Clouds.Animation
         // dời field lên lớp cha là mọi prefab đang gán data sẽ về null.
         public UIAnimationData UIAnimationData;
 
+        /// <summary>Trạng thái target trước lần phát gần nhất, do AnimationService ghi. Xem Restore().</summary>
+        [NonSerialized] public AnimationSnapshot Snapshot;
+
         protected readonly List<IUIAnimation> _animations = new();
 
         public bool IsPlaying
@@ -57,8 +60,14 @@ namespace Clouds.Animation
         /// <summary>Đọc UIAnimationData và nạp tween đã dựng vào _animations.</summary>
         protected abstract void BuildAnimations();
 
+        // Mọi cách phát đều đi qua AnimationService — kể cả nút Odin này và editor preview — để việc
+        // chụp snapshot và quyết định dựng lại tween chỉ nằm ở đúng một chỗ.
         [Button(ButtonSizes.Large)]
-        public void Play()
+        public void Play() => AnimationService.Play(this);
+
+        public void PlayReverse() => AnimationService.PlayReverse(this);
+
+        internal void PlayInternal()
         {
             if (_animations.Count == 0) { ReportEmpty(); return; }
             _completedLoops  = 0;
@@ -91,7 +100,7 @@ namespace Clouds.Animation
                 OnComplete?.Invoke();
         }
 
-        public void PlayReverse()
+        internal void PlayReverseInternal()
         {
             if (_animations.Count == 0) { ReportEmpty(); return; }
             _completedLoops = 0;

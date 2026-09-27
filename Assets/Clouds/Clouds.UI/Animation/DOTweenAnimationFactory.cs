@@ -101,7 +101,8 @@ namespace Clouds.UI
             Sequence seq = BaseSequence(ignoreTimeScale, rect.gameObject);
 
             if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
-            var tween = rect.DOScale(effect.ScaleTo, effect.Duration).From(effect.ScaleFrom, false, false);
+            Vector3 scaleFrom = effect.FromCurrent ? rect.localScale : effect.ScaleFrom;
+            var tween = rect.DOScale(effect.ScaleTo, effect.Duration).From(scaleFrom, false, false);
             ApplyEase(tween, effect);
             seq.Append(tween);
             if (effect.Loop) seq.SetLoops(effect.LoopCount, MapLoop(effect.LoopType));
@@ -156,7 +157,8 @@ namespace Clouds.UI
 
             Sequence seq = BaseSequence(ignoreTimeScale, canvas.gameObject);
             if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
-            var tween = canvas.DOFade(effect.FadeTo, effect.Duration).From(effect.FadeFrom, false, false);
+            float fadeFrom = effect.FromCurrent ? canvas.alpha : effect.FadeFrom;
+            var tween = canvas.DOFade(effect.FadeTo, effect.Duration).From(fadeFrom, false, false);
             ApplyEase(tween, effect);
             seq.Append(tween);
             if (effect.Loop) seq.SetLoops(effect.LoopCount, MapLoop(effect.LoopType));
@@ -171,7 +173,8 @@ namespace Clouds.UI
 
             Sequence seq = BaseSequence(ignoreTimeScale, graphic.gameObject);
             if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
-            var tween = graphic.DOColor(effect.ColorTo, effect.Duration).From(effect.ColorFrom, false);
+            Color colorFrom = effect.FromCurrent ? graphic.color : effect.ColorFrom;
+            var tween = graphic.DOColor(effect.ColorTo, effect.Duration).From(colorFrom, false);
             ApplyEase(tween, effect);
             seq.Append(tween);
             if (effect.Loop) seq.SetLoops(effect.LoopCount, MapLoop(effect.LoopType));

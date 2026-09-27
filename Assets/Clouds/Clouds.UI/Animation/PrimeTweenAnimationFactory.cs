@@ -143,10 +143,18 @@ namespace Clouds.UI
             int   cycles      = Cycles(effect);
             PTCycleMode cm    = MapCycleMode(effect.LoopType);
 
+            // captured = giá trị From của lần phát xuôi gần nhất, để PlayReverse() còn biết quay về đâu
+            // khi From được lấy từ giá trị hiện tại thay vì từ asset.
+            // Khởi tạo bằng giá trị lúc dựng chứ không phải scaleFrom trong asset: PlayReverse() có thể
+            // được gọi trước cả lần Play() đầu tiên, lúc đó vẫn phải có mốc hợp lý để quay về.
+            bool fromCurrent = effect.FromCurrent;
+            Vector3 captured = fromCurrent ? rect.localScale : scaleFrom;
+
             return new PrimeTweenUIAnimation((rev) =>
             {
-                Vector3 from = rev ? scaleTo : scaleFrom;
-                Vector3 end  = rev ? scaleFrom : scaleTo;
+                if (!rev && fromCurrent) captured = rect.localScale;
+                Vector3 from = rev ? scaleTo : captured;
+                Vector3 end  = rev ? captured : scaleTo;
                 rect.localScale = from;
                 Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
                 if (delay > 0f) seq.ChainDelay(delay);
@@ -220,10 +228,14 @@ namespace Clouds.UI
             int   cycles     = Cycles(effect);
             PTCycleMode cm   = MapCycleMode(effect.LoopType);
 
+            bool fromCurrent = effect.FromCurrent;
+            float captured   = fromCurrent ? canvas.alpha : fadeFrom;
+
             return new PrimeTweenUIAnimation((rev) =>
             {
-                float from = rev ? fadeTo : fadeFrom;
-                float end  = rev ? fadeFrom : fadeTo;
+                if (!rev && fromCurrent) captured = canvas.alpha;
+                float from = rev ? fadeTo : captured;
+                float end  = rev ? captured : fadeTo;
                 canvas.alpha = from;
                 Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
                 if (delay > 0f) seq.ChainDelay(delay);
@@ -246,10 +258,14 @@ namespace Clouds.UI
             PTCycleMode cm   = MapCycleMode(effect.LoopType);
             Graphic g        = graphic;
 
+            bool fromCurrent = effect.FromCurrent;
+            Color captured   = fromCurrent ? g.color : colorFrom;
+
             return new PrimeTweenUIAnimation((rev) =>
             {
-                Color from = rev ? colorTo : colorFrom;
-                Color end  = rev ? colorFrom : colorTo;
+                if (!rev && fromCurrent) captured = g.color;
+                Color from = rev ? colorTo : captured;
+                Color end  = rev ? captured : colorTo;
                 g.color = from;
                 Sequence seq = Sequence.Create(cycles: cycles, cycleMode: cm);
                 if (delay > 0f) seq.ChainDelay(delay);

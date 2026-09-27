@@ -31,7 +31,8 @@ Assets/Clouds/
 ├── Clouds.Data/      # DynamicData, SerializableDictionary, ExcelReader
 ├── Editor/           # Custom editors + property drawers: DOTweenPreviewer, SerializableDictionaryDrawer,
 │                     #   Show2DArrayDrawer, MissingScriptFinder, TMPFontChecker, UIAnimation*Editor
-├── Clouds.Manager/   # MyBehaviour, Bootstrap, DataService, Repository<T>, LoadSaveService
+├── Clouds.Manager/   # MyBehaviour, Bootstrap, DataService, Repository<T>, LoadSaveService,
+│                     #   ConfigService/ConfigLoader, AssetService
 ├── Clouds.Materials/ # Shared materials — reused across games, no game-specific art baked in
 ├── Clouds.Physics/   # PhysicUltilitis, SetAllRigidbody
 ├── Clouds.Plugins/   # ExcelDataReader DLLs
@@ -75,6 +76,7 @@ Assets/
 ├── Game.Scripts/    # game-specific C# — subdivided by role, folder = namespace like Assets/Clouds/:
 │                    #   Core/, Data/, Service/, Editor/ (add more, e.g. Common/, Helper/, as needed)
 ├── Game.Config/     # config ScriptableObject assets loaded at runtime via ConfigService (see below)
+├── Game.Addressable/ # content assets loaded on demand by key via AssetService (see below)
 ├── Game.Animation/  # UIAnimationData assets for world-space effects (TweenWorldAnimation).
 │                    #   UI presets stay in Clouds.UI/Animation/AnimationPresets/ — the two are not
 │                    #   interchangeable: UI offsets are canvas pixels, world offsets are metres
@@ -278,6 +280,22 @@ T config = ConfigService.GetConfig<T>();   // T : ScriptableObject — throws if
 - Registry is keyed by concrete type (`typeof(T)`), so only one asset per config type may be loaded at a time. Two assets of the *same* type both labeled means the later load silently wins — model per-variant tuning as a runtime parameter instead of as multiple assets of one config type.
 - `ConfigService.GetConfig<T>()` throws `InvalidOperationException` if `T` wasn't loaded — call `ConfigLoader.LoadAllAsync()` first (Bootstrap already does this before scene load).
 
+### AssetService
+
+`Assets/Clouds/Clouds.Manager/AssetService.cs` — on-demand Addressables loading by key, for **content** assets that are not configs (level sets, data tables, per-area assets).
+
+```csharp
+T asset = await AssetService.LoadAsync<T>("MyAsset");  // T : UnityEngine.Object
+bool ready = AssetService.TryGet<T>("MyAsset", out T cached);  // sync, no await — for Update()
+AssetService.Release("MyAsset");
+AssetService.ReleaseAll();
+```
+
+- **Drop a file in `Assets/Game.Addressable/` and load it by filename.** `AddressableFolderSync` (see Editor Tools) registers every asset in that folder as an Addressables entry with address = file name without extension. No Addressables window, no hand-typed address. Any other Addressables key works too — the folder is just the convenient path.
+- Cached per key, and the cache holds the *handle*, not the result: repeat calls cost one load, and concurrent callers await one operation instead of each starting their own. Once loaded, `LoadAsync` completes synchronously in the same frame, so callers don't need their own cache field.
+- A failed load stays cached on purpose — a wrong key is a content error, not a transient one, and evicting it risks a double `Release` when several callers are awaiting the same handle.
+- **Choose against `ConfigService`, don't mix them:** `ConfigService` loads everything at boot by label and looks up *by type*, one asset per type — for shared tuning that is always needed. `AssetService` loads *by key* on demand, allows many assets of one type, and can release them — for content where only part is in use at a time.
+
 ### DynamicData & SerializableDictionary
 
 - `DynamicData` — abstract base for game data objects (has `Name` property). Extend for custom data.
@@ -342,6 +360,7 @@ new DeSpawnbyEvent(despawnable, ref myAction).Excute();   // when action fires
 | `UIAnimationContainerEditor` | `Editor/` | Play/Stop per key + edit-mode DOTween preview |
 | `DOTweenPreviewer` | `Editor/` | Wraps `DOTweenEditorPreview` for edit-mode animation preview |
 | `ConfigGroupLabeler` | `Editor/` | Keeps the `Game.Config` label in sync with membership of the Addressables group of the same name (both directions), so `ConfigService` registration follows the group. `Tools > Clouds > Sync Config Group Labels` forces a pass |
+| `AddressableFolderSync` | `Editor/` | Makes `Assets/Game.Addressable/` the source of truth for `AssetService`: creates the matching Addressables group if missing, and keeps one entry per asset in the folder addressed by file name (adds, re-addresses, removes strays). Runs on Editor load and whenever the folder changes; `Tools > Clouds > Sync Addressable Folder` forces a pass |
 | `MissingScriptFinder` | `Editor/` | Finds GameObjects with missing script references |
 | `TMPFontChecker` | `Editor/` | Validates TextMeshPro font asset references |
 | `Show2DArrayDrawer` | `Editor/` | PropertyDrawer for `Serializable2DArray<T>` |

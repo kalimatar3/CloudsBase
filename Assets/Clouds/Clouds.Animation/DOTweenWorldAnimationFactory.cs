@@ -12,10 +12,6 @@ namespace Clouds.Animation
     /// </summary>
     public class DOTweenWorldAnimationFactory : IWorldAnimationFactory
     {
-        // URP đặt tên property màu là _BaseColor; shader built-in và Sprites/Default dùng _Color.
-        private static readonly int BaseColorId   = Shader.PropertyToID("_BaseColor");
-        private static readonly int LegacyColorId = Shader.PropertyToID("_Color");
-
         private static DG.Tweening.Ease MapEase(Clouds.UI.Ease ease)
             => (DG.Tweening.Ease)Enum.Parse(typeof(DG.Tweening.Ease), ease.ToString());
 
@@ -85,7 +81,8 @@ namespace Clouds.Animation
             Sequence seq = BaseSequence(ignoreTimeScale, target.gameObject);
 
             if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
-            Finish(seq, target.DOScale(effect.ScaleTo, effect.Duration).From(effect.ScaleFrom, false, false), effect);
+            Vector3 scaleFrom = effect.FromCurrent ? target.localScale : effect.ScaleFrom;
+            Finish(seq, target.DOScale(effect.ScaleTo, effect.Duration).From(scaleFrom, false, false), effect);
             return new DOTweenUIAnimation(seq);
         }
 
@@ -127,8 +124,9 @@ namespace Clouds.Animation
             if (renderer == null) return Empty(ignoreTimeScale);
 
             var block      = new MaterialPropertyBlock();
-            int propertyId = ResolveColorProperty(renderer);
-            float alpha    = effect.FadeFrom;
+            int propertyId = RendererColor.ResolveProperty(renderer);
+            float fadeFrom = effect.FromCurrent ? RendererColor.Read(renderer, block, propertyId).a : effect.FadeFrom;
+            float alpha    = fadeFrom;
 
             Sequence seq = BaseSequence(ignoreTimeScale, renderer.gameObject);
             if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
@@ -136,10 +134,10 @@ namespace Clouds.Animation
             Tween tween = DOTween.To(() => alpha, value =>
             {
                 alpha = value;
-                Color color = ReadColor(renderer, block, propertyId);
+                Color color = RendererColor.Read(renderer, block, propertyId);
                 color.a = value;
-                WriteColor(renderer, block, propertyId, color);
-            }, effect.FadeTo, effect.Duration).From(effect.FadeFrom, false);
+                RendererColor.Write(renderer, block, propertyId, color);
+            }, effect.FadeTo, effect.Duration).From(fadeFrom, false);
 
             Finish(seq, tween, effect);
             return new DOTweenUIAnimation(seq);
@@ -151,9 +149,10 @@ namespace Clouds.Animation
         {
             if (renderer == null) return Empty(ignoreTimeScale);
 
-            var block      = new MaterialPropertyBlock();
-            int propertyId = ResolveColorProperty(renderer);
-            Color current  = effect.ColorFrom;
+            var block       = new MaterialPropertyBlock();
+            int propertyId  = RendererColor.ResolveProperty(renderer);
+            Color colorFrom = effect.FromCurrent ? RendererColor.Read(renderer, block, propertyId) : effect.ColorFrom;
+            Color current   = colorFrom;
 
             Sequence seq = BaseSequence(ignoreTimeScale, renderer.gameObject);
             if (effect.Delay > 0) seq.AppendInterval(effect.Delay);
@@ -161,33 +160,12 @@ namespace Clouds.Animation
             Tween tween = DOTween.To(() => current, value =>
             {
                 current = value;
-                WriteColor(renderer, block, propertyId, value);
-            }, effect.ColorTo, effect.Duration).From(effect.ColorFrom, false);
+                RendererColor.Write(renderer, block, propertyId, value);
+            }, effect.ColorTo, effect.Duration).From(colorFrom, false);
 
             Finish(seq, tween, effect);
             return new DOTweenUIAnimation(seq);
         }
 
-        private static int ResolveColorProperty(Renderer renderer)
-        {
-            Material mat = renderer.sharedMaterial;
-            return mat != null && !mat.HasProperty(BaseColorId) ? LegacyColorId : BaseColorId;
-        }
-
-        private static Color ReadColor(Renderer renderer, MaterialPropertyBlock block, int propertyId)
-        {
-            renderer.GetPropertyBlock(block);
-            if (block.HasColor(propertyId)) return block.GetColor(propertyId);
-
-            Material mat = renderer.sharedMaterial;
-            return mat != null && mat.HasProperty(propertyId) ? mat.GetColor(propertyId) : Color.white;
-        }
-
-        private static void WriteColor(Renderer renderer, MaterialPropertyBlock block, int propertyId, Color color)
-        {
-            renderer.GetPropertyBlock(block);
-            block.SetColor(propertyId, color);
-            renderer.SetPropertyBlock(block);
-        }
     }
 }

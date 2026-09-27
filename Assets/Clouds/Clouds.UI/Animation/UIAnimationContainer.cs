@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Clouds.Animation;
 using UnityEngine;
 using UnityEngine.UI;
 using Sirenix.OdinInspector;
@@ -43,6 +44,13 @@ namespace Clouds.UI
 
         private readonly Dictionary<string, List<IUIAnimation>> _runtime = new();
 
+        private RectTransform _rect;
+        private CanvasGroup   _canvasGroup;
+        private Graphic       _graphic;
+
+        /// <summary>Trạng thái target trước lần phát gần nhất, do AnimationService ghi. Xem Restore().</summary>
+        [NonSerialized] public AnimationSnapshot Snapshot;
+
         public IReadOnlyList<AnimationEntry> Entries => _entries;
 
         private void Awake() => Build();
@@ -56,6 +64,9 @@ namespace Clouds.UI
         /// Nếu key không tồn tại, cả hai callback đều gọi ngay.
         /// </summary>
         public void Play(string key, Action onStart = null, Action onComplete = null)
+            => AnimationService.Play(this, key, onStart, onComplete);
+
+        internal void PlayInternal(string key, Action onStart, Action onComplete)
         {
             if (!_runtime.TryGetValue(key, out var anims) || anims.Count == 0)
             {
@@ -99,15 +110,37 @@ namespace Clouds.UI
         private void Build()
         {
             _runtime.Clear();
-            var rt      = GetComponent<RectTransform>();
-            var cg      = GetComponent<CanvasGroup>();
-            var graphic = GetComponent<Graphic>();
+            _rect        = GetComponent<RectTransform>();
+            _canvasGroup = GetComponent<CanvasGroup>();
+            _graphic     = GetComponent<Graphic>();
 
             foreach (var entry in _entries)
             {
                 if (string.IsNullOrEmpty(entry.Key) || entry.Data == null) continue;
-                _runtime[entry.Key] = BuildAnimations(entry.Data, rt, cg, graphic);
+                _runtime[entry.Key] = BuildAnimations(entry.Data, _rect, _canvasGroup, _graphic);
             }
+        }
+
+        internal UIAnimationData DataFor(string key)
+        {
+            foreach (var entry in _entries)
+                if (entry.Key == key) return entry.Data;
+            return null;
+        }
+
+        /// <summary>
+        /// Dựng lại tween của đúng một key, các key khác giữ nguyên. AnimationService gọi trước khi
+        /// phát preset dùng "From = giá trị hiện tại".
+        /// </summary>
+        internal void RebuildKey(string key)
+        {
+            UIAnimationData data = DataFor(key);
+            if (data == null) return;
+
+            if (_runtime.TryGetValue(key, out var previous))
+                foreach (var a in previous) a.Stop();
+
+            _runtime[key] = BuildAnimations(data, _rect, _canvasGroup, _graphic);
         }
 
         private static List<IUIAnimation> BuildAnimations(
