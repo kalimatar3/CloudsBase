@@ -9,7 +9,8 @@ This file provides coding guidance for AI agents working in this repository.
 - base component lifecycle (`MyBehaviour`, `Singleton<T>`) and a single `Bootstrap` entry point,
 - decoupled messaging (`SignalBus` — global and scoped pub/sub),
 - UI animation (`UIAnimationContainer`, `DOTweenAnimationFactory`),
-- popup show/hide (`PopupService`, `PopupView`),
+- UI navigation — screen stack, popup stack, overlays (`ScreenService`, `PopupService`, `ActivityService`),
+- multi-object animation choreography (`UIAnimationSequencer`),
 - data persistence (`LoadSaveService`, `Repository<T>`, `DataService`),
 - object pooling (`PoolService`, Addressables key-based, despawn strategies),
 - hierarchical state machine (`State`, `Statemachine<T>`),
@@ -46,10 +47,12 @@ Assets/Clouds/
 ├── Clouds.Textures/  # Only textures a shared Material in Clouds.Materials/ actually references
 ├── Clouds.Timeline/  # Custom Timeline tracks and behaviours
 └── Clouds.UI/        # Physical subfolders below are organization only — namespace stays flat Clouds.UI
-    ├── Animation/    # UIAnimationContainer, DOTweenAnimationFactory, PrimeTweenAnimationFactory,
-    │                 #   TweenCUIAnimation, AnimationPresets/, Data/ (UIAnimationData, UISetting, UIData),
+    ├── Animation/    # UIAnimationContainer, UIAnimationSequencer, UIAnimationBuilder, DOTweenAnimationFactory,
+    │                 #   PrimeTweenAnimationFactory, TweenCUIAnimation, AnimationPresets/ (Navigation/ = defaults
+    │                 #   for UINavigatorConfig), Data/ (UIAnimationData, UISetting, UIData),
     │                 #   Enums/ (UIEnums), Interfaces/ (IUIAnimation*, IUISetData)
-    ├── Popup/        # PopupService (static show/hide by key), PopupView (self-registering bridge)
+    ├── Navigation/   # Screen/Popup/Activity: *Service (static entry), *Layer (scene container), *View (base),
+    │                 #   UIView, UILayer, UINavigatorConfig, UIBackdrop, UICloseButton, UIBackKeyListener
     └── Layout/       # UIHelper, UIUtility, FlexibleGridScaler, HorizontalLayoutResizer, TextUIFormula, FitRectText
 ```
 
@@ -174,7 +177,7 @@ await SignalBus.PublishAsync(new OpenShopMsg());
 
 Always subscribe in `OnEnable`, unsubscribe in `OnDisable`. Call `SignalBus.ClearAll()` on scene teardown if needed.
 
-`SignalBus` also resets itself automatically via `[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]` (Editor-only) — subscriber dictionaries are plain C# state, so without this they'd leak stale entries across Play sessions when domain reload is disabled. `PopupService` and `PoolService` carry the same reset hook for the same reason.
+`SignalBus` also resets itself automatically via `[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]` (Editor-only) — subscriber dictionaries are plain C# state, so without this they'd leak stale entries across Play sessions when domain reload is disabled. `UILayer` (its layer registry) and `PoolService` carry the same reset hook for the same reason.
 
 ## UI System
 
@@ -205,23 +208,53 @@ Edit-mode preview via `UIAnimationContainerEditor` — Play/Stop buttons per key
 
 Prebuilt assets in `Assets/Clouds/Clouds.UI/Animation/AnimationPresets/` (FadeIn, FadeOut, Bounce, Click, MoveUp, etc.).
 
-### PopupService
+### UIAnimationSequencer
 
-`Assets/Clouds/Clouds.UI/Popup/PopupService.cs` — static show/hide by string key. Replaces the old `PanelManager` MonoBehaviour/Singleton; no queue/stacking yet (deferred).
+`Assets/Clouds/Clouds.UI/Animation/UIAnimationSequencer.cs` — choreographs animations across **many** objects. `TweenCUIAnimation` says how one object moves; the sequencer says in what order a group moves.
 
-- `PopupView` (`Popup/PopupView.cs`) — attach to a popup root; self-registers in `Awake()` (keyed by an Inspector field or the GameObject name) and unregisters in `OnDestroy()`. Registration happens in `Awake`, not `OnEnable`, specifically so `Hide()`'s `SetActive(false)` doesn't unregister the popup.
-- `PopupService.Show(key)` / `Hide(key)` / `HideAll()` — toggle a registered popup's `GameObject.SetActive`.
+- Each key is a track of **steps that run one after another**; inside a step every `TweenAnimationBase` runs **in parallel**, and the step ends when its longest animation ends. Each step has its own `Delay`.
+- On the root of a `UIView`, keys `"Show"`/`"Hide"` (`UIAnimationSequencer.SHOW`/`HIDE`) replace that view's default transition.
+- Every animation is `Rebuild()`-ed right before it plays — the DOTween backend `Kill`s a tween on `Stop()`, so replaying a stopped one would silently do nothing and hang the await.
+- `Restore(key)` puts every object back to its pre-play state; views call it after Hide so a pooled/scene view doesn't reopen from its hidden pose.
 
 ```csharp
-PopupService.Show("Shop");
-PopupService.Hide("Shop");
+await _sequencer.PlayAsync("Reward");
+_sequencer.Play("Idle", onComplete: OnIdleDone);
+_sequencer.Restore("Reward");
 ```
 
-Combine with animation the same way panels used to:
+Inspector (`UIAnimationSequencerEditor`) is hand-drawn, not a dictionary drawer: one collapsible card per key, numbered steps, drag-and-drop GameObjects/TweenAnimations into a step, and ▶/■ to preview a key **outside Play Mode** (Prefab Mode included). The preview auto-restores objects when it ends so a prefab never gets saved mid-animation; it runs each animation for one cycle (loops aren't replayed). It warns when a Show/Hide track loops forever or contains animations that don't ignore time scale.
+
+### Navigation — Screen / Popup / Activity (`Clouds.UI/Navigation/`)
+
+Three kinds of UI, each living in its own layer (a `RectTransform` under a Canvas; draw order = hierarchy order):
+
+| Kind | Layer | View base | Behaviour |
+|---|---|---|---|
+| Screen | `ScreenLayer` | `ScreenView` | Stack with history — push hides and deactivates the previous screen, pop brings it back |
+| Popup | `PopupLayer` | `PopupView` | Stack — popups pile up, each gets its own `UIBackdrop` right below it |
+| Activity | `ActivityLayer` | `ActivityView` | No stack — show/hide independently by key (toast, tutorial, loading, input blocker) |
+
 ```csharp
-_anim.Play("Show", onStart: () => gameObject.SetActive(true));
-_anim.Play("Hide", onComplete: () => gameObject.SetActive(false));
+await ScreenService.PushAsync<ShopScreen>();
+await ScreenService.PopAsync();
+
+var confirm = await PopupService.ShowAsync<ConfirmPopup, ConfirmArgs>(args);   // typed args via IViewArgs<T>
+await confirm.WaitHiddenAsync();                                                // result = read a field afterwards
+await PopupService.CloseTopAsync();
+
+await ActivityService.ShowAsync<LoadingActivity>();
+await ActivityService.HideAsync<LoadingActivity>();
 ```
+
+- **Key = class name by default.** A view is found, in order: a view placed as a direct child of the layer in the scene (key = its `_sceneKey` field, else GameObject name) → the layer's pool → a prefab loaded through `AssetService` by that key. Name the prefab after the class and drop it in `Assets/Game.Addressable/` and it just opens.
+- **Lifecycle hooks** on `UIView`: `OnWillShowAsync` (active but transparent — bind data here) → Show transition → `OnDidShow` → … → `OnWillHideAsync` → Hide transition → `OnDidHide`. `IViewArgs<T>.SetArgs` runs before `OnWillShowAsync`.
+- **Every call on a layer is queued**, never dropped: calling Show/Close while a transition runs waits its turn. Consequence: never `await` another navigation call on the *same* layer from inside an async hook — the layer is waiting for that hook, so both wait forever. Fire it with `.Forget()` or do it in `OnDidShow`/`OnDidHide`.
+- **Transitions**: key `"Show"`/`"Hide"` of a `UIAnimationSequencer` on the view root if present, otherwise the defaults in `UINavigatorConfig`. After Hide the view is restored to its pre-Hide state before being deactivated/pooled.
+- **`UINavigatorConfig`** (`Assets/Game.Config/UINavigatorConfig.asset`, Addressable in group `Game.Config`) holds the default transitions (presets in `AnimationPresets/Navigation/`), backdrop color/prefab key/click-to-close, `EnablePooling`, `InteractableDuringTransition`, `IgnoreTimeScale`. Not loaded (Play pressed straight from a scene, bypassing `Bootstrap`) → it logs one warning and runs with no transitions.
+- **Back key**: put one `UIBackKeyListener` in the scene — Esc/Android Back closes the top popup, else pops a screen. `PopupView._closeOnBack = false` makes a popup swallow Back without closing (force-update dialogs).
+- `UICloseButton` on any Button closes the view that contains it — no code needed.
+- Transitions ignore `Time.timeScale` by default so UI still works while the game is paused. For sequencer animations that's per component: `TweenAnimationBase.IgnoreTimeScale` (defaults to false to keep existing behaviour — the sequencer inspector offers a one-click fix).
 
 ### UI Utilities (`Clouds.UI/Layout/`)
 
@@ -358,6 +391,7 @@ new DeSpawnbyEvent(despawnable, ref myAction).Excute();   // when action fires
 | Tool | Location | Purpose |
 |---|---|---|
 | `UIAnimationContainerEditor` | `Editor/` | Play/Stop per key + edit-mode DOTween preview |
+| `UIAnimationSequencerEditor` | `Editor/` | Card-per-key layout for `UIAnimationSequencer`, drag-and-drop steps, ▶/■ preview outside Play Mode (PrimeTween or DOTween) with auto-restore |
 | `DOTweenPreviewer` | `Editor/` | Wraps `DOTweenEditorPreview` for edit-mode animation preview |
 | `ConfigGroupLabeler` | `Editor/` | Keeps the `Game.Config` label in sync with membership of the Addressables group of the same name (both directions), so `ConfigService` registration follows the group. `Tools > Clouds > Sync Config Group Labels` forces a pass |
 | `AddressableFolderSync` | `Editor/` | Makes `Assets/Game.Addressable/` the source of truth for `AssetService`: creates the matching Addressables group if missing, and keeps one entry per asset in the folder addressed by file name (adds, re-addresses, removes strays). Runs on Editor load and whenever the folder changes; `Tools > Clouds > Sync Addressable Folder` forces a pass |
@@ -392,7 +426,7 @@ var rb = gameObject.GetOrAddComponent<Rigidbody>();
 - **Subscribe/Unsubscribe:** Always pair in `OnEnable`/`OnDisable`. Never subscribe in `Awake` or `Start` alone.
 - **Odin Inspector:** Use `[ListDrawerSettings]`, `[HorizontalGroup]`, `[HideLabel]`, `[HideInInspector]` freely. Custom editors extend `OdinEditor`.
 - **Serialization:** Use `SerializableDictionary` for Inspector-visible dictionaries. Use `Serializable2DArray<T>` for 2D grid data.
-- **No base UI classes:** `baseUI`, `BaseButton`, `BasePopup`, `BaseSlider` have been removed. UI panels are plain `MonoBehaviour` subclasses that use `UIAnimationContainer` for animation and `SignalBus` for communication.
+- **No base UI classes beyond the navigation views:** `baseUI`, `BaseButton`, `BasePopup`, `BaseSlider` have been removed. Anything opened through navigation extends `ScreenView`/`PopupView`/`ActivityView` (thin: lifecycle hooks only); every other UI piece is a plain `MonoBehaviour` that uses `UIAnimationContainer`/`UIAnimationSequencer` for animation and `SignalBus` for communication.
 - **Component decomposition (Unity SRP):** Split complex GameObjects into focused components — one component per responsibility. A top-level coordinator script (e.g. `Player`) holds references and delegates; sub-components (e.g. `PlayerMovement`, `PlayerModel`, `PlayerDamageReceiver`) each own exactly one domain. Wire them in `LoadComponents()`. Never put movement, health, and visual logic all in the same class.
 
   ```
