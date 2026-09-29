@@ -40,7 +40,7 @@ namespace Clouds.UI
         [Title("Chung")]
         [Tooltip("Giữ lại view đã đóng để lần mở sau khỏi Instantiate lại.")]
         public bool EnablePooling = true;
-        [Tooltip("Cho phép bấm nút trong layer khi transition đang chạy.")]
+        [Tooltip("Cho phép bấm UI trong lúc transition. Tắt (mặc định) = chặn toàn bộ UI tới khi transition xong.")]
         public bool InteractableDuringTransition;
         [Tooltip("Transition mặc định chạy theo thời gian thực — vẫn mở/đóng được khi game pause.")]
         public bool IgnoreTimeScale = true;

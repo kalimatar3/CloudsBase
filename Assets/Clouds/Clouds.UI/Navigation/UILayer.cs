@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Clouds.Manager;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Clouds.UI
 {
@@ -16,7 +17,7 @@ namespace Clouds.UI
     /// - Xếp hàng: mọi lệnh Show/Hide/Push/Pop của một layer chạy tuần tự, lệnh gửi tới lúc đang có
     ///   transition sẽ đợi tới lượt chứ không bị bỏ.
     /// </summary>
-    [RequireComponent(typeof(RectTransform), typeof(CanvasGroup))]
+    [RequireComponent(typeof(RectTransform))]
     public abstract class UILayer : MyBehaviour
     {
         [Tooltip("Tên để gọi layer từ service khi có nhiều layer cùng loại. Để trống = tên GameObject.")]
@@ -26,7 +27,7 @@ namespace Clouds.UI
 
         private readonly Dictionary<string, UIView> _sceneViews = new();
         private readonly Dictionary<string, Stack<UIView>> _pool = new();
-        private CanvasGroup _canvasGroup;
+        private GameObject _inputBlocker;
         private UniTask _pending = UniTask.CompletedTask;
         private int _runningCount;
 
@@ -36,12 +37,6 @@ namespace Clouds.UI
         public bool IsBusy => _runningCount > 0;
 
         protected static UINavigatorConfig Config => UINavigatorConfig.Current;
-
-        protected override void LoadComponents()
-        {
-            base.LoadComponents();
-            _canvasGroup = GetComponent<CanvasGroup>();
-        }
 
         protected override void Awake()
         {
@@ -204,13 +199,34 @@ namespace Clouds.UI
         private void BeginOperation()
         {
             _runningCount++;
-            if (!Config.InteractableDuringTransition) _canvasGroup.interactable = false;
+            if (!Config.InteractableDuringTransition) SetInputBlocked(true);
         }
 
         private void EndOperation()
         {
             _runningCount--;
-            if (_runningCount == 0) _canvasGroup.interactable = true;
+            if (_runningCount == 0) SetInputBlocked(false);
+        }
+
+        // Chặn bấm bằng một tấm trong suốt phủ trên cùng, KHÔNG dùng CanvasGroup.interactable: tắt
+        // interactable làm mọi Button chuyển sang màu disabled, nên mỗi lần popup mở/đóng các nút nháy
+        // xám. Tấm chắn có Canvas riêng với sorting cao nhất để luôn nằm trên view vừa SetAsLastSibling,
+        // và chặn cả các layer khác — bấm xuyên xuống màn dưới lúc popup đang bay vào cũng là lỗi.
+        private void SetInputBlocked(bool blocked)
+        {
+            if (_inputBlocker == null)
+            {
+                if (!blocked) return;
+                _inputBlocker = new GameObject("[InputBlocker]", typeof(RectTransform), typeof(Canvas),
+                                               typeof(GraphicRaycaster), typeof(Image));
+                _inputBlocker.transform.SetParent(transform, false);
+                UIBackdrop.Stretch((RectTransform)_inputBlocker.transform);
+                var canvas = _inputBlocker.GetComponent<Canvas>();
+                canvas.overrideSorting = true;
+                canvas.sortingOrder    = short.MaxValue;
+                _inputBlocker.GetComponent<Image>().color = Color.clear;
+            }
+            _inputBlocker.SetActive(blocked);
         }
 
 #if UNITY_EDITOR
