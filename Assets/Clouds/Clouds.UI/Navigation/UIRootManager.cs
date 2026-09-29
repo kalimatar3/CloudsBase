@@ -90,23 +90,32 @@ namespace Clouds.UI
             if (_persistent == this) _persistent = null;
         }
 
-        // RequireComponent chỉ tự thêm khi gắn component trong Editor; root được thêm bằng code hay
-        // chép YAML vào scene thì phải tự bổ sung ở đây.
+        // Gắn component trong Editor: RequireComponent thêm CanvasScaler ở chế độ Constant Pixel Size
+        // mặc định — UI dựng cho 1080×1920 sẽ to/nhỏ theo độ phân giải thật. Đặt sẵn cấu hình ở đây.
+        protected override void Reset()
+        {
+            base.Reset();
+            if (TryGetComponent(out CanvasScaler scaler)) ConfigureScaler(scaler);
+        }
+
+        // RequireComponent chỉ tự thêm khi gắn component trong Editor; root chép YAML vào scene mà thiếu
+        // component thì phải tự bổ sung ở đây.
         private void SetupCanvas()
         {
             if (!TryGetComponent(out Canvas canvas)) canvas = gameObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
-            if (!TryGetComponent(out CanvasScaler scaler))
-            {
-                scaler = gameObject.AddComponent<CanvasScaler>();
-                scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                scaler.referenceResolution = new Vector2(1080, 1920);
-                scaler.matchWidthOrHeight  = 0.5f;
-            }
+            if (!TryGetComponent(out CanvasScaler _)) ConfigureScaler(gameObject.AddComponent<CanvasScaler>());
 
             gameObject.GetOrAddComponent<GraphicRaycaster>();
             gameObject.GetOrAddComponent<UIBackKeyListener>();
+        }
+
+        private static void ConfigureScaler(CanvasScaler scaler)
+        {
+            scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1080, 1920);
+            scaler.matchWidthOrHeight  = 0.5f;
         }
 
         private void EnsureEventSystem()
