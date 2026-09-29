@@ -52,7 +52,8 @@ Assets/Clouds/
     │                 #   for UINavigatorConfig), Data/ (UIAnimationData, UISetting, UIData),
     │                 #   Enums/ (UIEnums), Interfaces/ (IUIAnimation*, IUISetData)
     ├── Navigation/   # Screen/Popup/Activity: *Service (static entry), *Layer (scene container), *View (base),
-    │                 #   UIView, UILayer, UINavigatorConfig, UIBackdrop, UICloseButton, UIBackKeyListener
+    │                 #   UIRootManager (game-wide root in Bootstrap), UIView, UILayer, UINavigatorConfig,
+    │                 #   UIBackdrop, UICloseButton, UIBackKeyListener
     └── Layout/       # UIHelper, UIUtility, FlexibleGridScaler, HorizontalLayoutResizer, TextUIFormula, FitRectText
 ```
 
@@ -145,6 +146,7 @@ If (1) is true but (2) isn't — nothing outside the class ever reads `.Instance
 - `InitializeAsync()` runs two ordered steps today: `DataService.PreloadAll()` — eagerly loads every `Repository<T>` for every concrete `DynamicData` subclass in the project (see Repository\<T\> below) — then `await ConfigLoader.LoadAllAsync()` — loads every Addressables-labeled config `ScriptableObject` into `ConfigService`. Both happen before `Start()` finishes, instead of leaving the first access to happen lazily/silently whenever gameplay code first touches it.
 - Override `InitializeAsync()` in a game-specific bootstrap to add further ordered async steps *after* calling `base.InitializeAsync()` (backend auth, …), mirroring an `AppBootstrap` → `GameBootFlow` split for larger projects.
 - Once `InitializeAsync()` completes, `Start()` calls `LoadNextScene()` (virtual, overridable), which loads `SceneManager.GetActiveScene().buildIndex + 1` — the scene must sit in Build Settings with a real "next" scene after it, or it logs a warning and stays put.
+- The Bootstrap scene also holds the `UIRoot` (`UIRootManager`, see Navigation below) — the game-wide UI that survives every scene load after it.
 
 ### Messaging — SignalBus
 
@@ -227,7 +229,9 @@ Inspector (`UIAnimationSequencerEditor`) is hand-drawn, not a dictionary drawer:
 
 ### Navigation — Screen / Popup / Activity (`Clouds.UI/Navigation/`)
 
-Three kinds of UI, each living in its own layer (a `RectTransform` under a Canvas; draw order = hierarchy order):
+**`UIRootManager`** (the `UIRoot` object in the Bootstrap scene — CartSort's `UIController`) builds the layers from its Inspector list (name, type, sorting order; defaults Screens 100 / Popups 200 / Activities 300), each on its own override-sorting Canvas so a gameplay scene's HUD canvas (sorting 0) stays underneath. It is `DontDestroyOnLoad` — `Bootstrap` loads the next scene in `Single` mode, so without that the UI would die with the Bootstrap scene. It adds its own Canvas/CanvasScaler (1080×1920)/`UIBackKeyListener`, and an `EventSystem` child if the game has none — scenes loaded after Bootstrap need no EventSystem of their own. A scene may carry its own `UIRoot` so it can be played directly; if the Bootstrap root already exists that copy destroys itself, so there is always exactly one set of layers.
+
+Three kinds of UI, each living in its own layer (a `RectTransform` under the root; draw order = layer Canvas sorting order, else hierarchy order):
 
 | Kind | Layer | View base | Behaviour |
 |---|---|---|---|
@@ -252,7 +256,7 @@ await ActivityService.HideAsync<LoadingActivity>();
 - **Every call on a layer is queued**, never dropped: calling Show/Close while a transition runs waits its turn. Consequence: never `await` another navigation call on the *same* layer from inside an async hook — the layer is waiting for that hook, so both wait forever. Fire it with `.Forget()` or do it in `OnDidShow`/`OnDidHide`.
 - **Transitions**: key `"Show"`/`"Hide"` of a `UIAnimationSequencer` on the view root if present, otherwise the defaults in `UINavigatorConfig`. After Hide the view is restored to its pre-Hide state before being deactivated/pooled.
 - **`UINavigatorConfig`** (`Assets/Game.Config/UINavigatorConfig.asset`, Addressable in group `Game.Config`) holds the default transitions (presets in `AnimationPresets/Navigation/`), backdrop color/prefab key/click-to-close, `EnablePooling`, `InteractableDuringTransition` (off = a transparent top-most blocker swallows all UI input during a transition — not `CanvasGroup.interactable`, which would flash every Button to its disabled tint), `IgnoreTimeScale`. Not loaded (Play pressed straight from a scene, bypassing `Bootstrap`) → it logs one warning and runs with no transitions.
-- **Back key**: put one `UIBackKeyListener` in the scene — Esc/Android Back closes the top popup, else pops a screen. `PopupView._closeOnBack = false` makes a popup swallow Back without closing (force-update dialogs).
+- **Back key**: `UIBackKeyListener` (added by `UIRootManager`) — Esc/Android Back closes the top popup, else pops a screen. `PopupView._closeOnBack = false` makes a popup swallow Back without closing (force-update dialogs).
 - `UICloseButton` on any Button closes the view that contains it — no code needed.
 - Transitions ignore `Time.timeScale` by default so UI still works while the game is paused. For sequencer animations that's per component: `TweenAnimationBase.IgnoreTimeScale` (defaults to false to keep existing behaviour — the sequencer inspector offers a one-click fix).
 
