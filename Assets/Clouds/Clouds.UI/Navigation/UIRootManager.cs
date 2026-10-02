@@ -51,6 +51,10 @@ namespace Clouds.UI
                  "Bật thì các scene load sau Bootstrap không cần EventSystem riêng.")]
         [SerializeField] private bool _createEventSystem = true;
 
+        [Tooltip("Esc / nút Back Android: đóng popup trên cùng, không có thì pop màn hình (UIBackKeyListener). " +
+                 "Tắt khi game tự xử lý phím này qua input riêng (đổi phím được) — để bật thì phím bị xử lý hai lần.")]
+        [SerializeField] private bool _handleBackKey = true;
+
         [Tooltip("Tạo theo thứ tự này. Layer con có sẵn cùng tên thì giữ nguyên, không tạo lại.")]
         [SerializeField] private List<LayerConfig> _layers = new()
         {
@@ -108,7 +112,7 @@ namespace Clouds.UI
             if (!TryGetComponent(out CanvasScaler _)) ConfigureScaler(gameObject.AddComponent<CanvasScaler>());
 
             gameObject.GetOrAddComponent<GraphicRaycaster>();
-            gameObject.GetOrAddComponent<UIBackKeyListener>();
+            gameObject.GetOrAddComponent<UIBackKeyListener>().enabled = _handleBackKey;
         }
 
         private static void ConfigureScaler(CanvasScaler scaler)
