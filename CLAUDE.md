@@ -20,7 +20,15 @@ The framework lives entirely under `Assets/Clouds/`. Game projects import or cop
 
 ## Project Documentation
 
-Game-specific documentation (design, QA, art — context not derivable from code) lives in `DOCS/`, a sibling of `Assets/`. Read `DOCS/README.md` first — it indexes everything there — before answering questions about game design intent, QA acceptance criteria, or art direction. Load only the specific file the question needs, never the whole tree.
+Game-specific documentation (design, phases, QA, art — context not derivable from code) lives in `DOCS/`, a sibling of `Assets/`. Read `DOCS/README.md` first — it indexes everything there. Load only the specific file the question needs, never the whole tree.
+
+**★ Before implementing any gameplay feature, read `DOCS/PROCESS.md` and follow it.** The rule in one line: **do not implement anything not yet described in the GDD.** The five steps are: (1) read `DOCS/GD/GDD.md` sections 02–04 and the matching file in `DOCS/GD/Systems/` to check the feature is described; (2) if it is missing, wrong, contradictory, or still `[TBD]` — **stop and ask**, do not guess; (3) write a 3–5 line brief into the right GDD section with a link down; (4) write the detail into `GD/Systems/<NAME>.md` (design), `DEV/SYSTEM_<NAME>.md` (code), `QA/` (output quality), `Art/<NAME>.md` (art spec); (5) only then write code, and afterwards update `DOCS/CHECKLIST.md`.
+
+**Anything that comes up mid-task gets a line in `DOCS/BACKLOG.md` before it gets done** — including a bug or gap you notice while working on something else, and including small things. Say so, don't silently fix it. The only exception is work already inside the scope of the line you are on.
+
+Documentation layout: `DOCS/GD/GDD.md` is the **overview** only — one brief per system plus a link. Detail lives one file per system in `DOCS/GD/Systems/`. Everything specific to one phase lives in `DOCS/Phases/` (scope, acceptance criteria, testcases, the world map). `DOCS/BACKLOG.md` and `DOCS/CHECKLIST.md` contain **a 3-column table and nothing else** — no notes, no summary rows; their conventions live in `DOCS/PROCESS.md` section 3. Backlog is run top to bottom; a finished line moves to CHECKLIST. Every piece of information has exactly **one** home — link to it, never copy it (full table: `DOCS/PROCESS.md` section 4).
+
+**The `DOCS/` tree ships empty.** Every file in it carries only guidance on what belongs where — no design, no phases, no numbers from any game. A project starting from this base fills them in: `BACKLOG.md` takes work in, `CHECKLIST.md` records progress, and `GD/` and `DEV/` thicken one system at a time.
 
 ## Project Structure
 

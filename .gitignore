@@ -105,3 +105,12 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Python bytecode tu DOCS/tools va Tools/
+__pycache__/
+
+# Ban xuat Excel cua CHECKLIST.md - sinh lai duoc tu DOCS/tools/backlog_to_xlsx.py
+DOCS/CHECKLIST.xlsx
+
+# Ban checkout thu hai cua phien Claude Code - khong phai nguon
+/.claude/worktrees/
