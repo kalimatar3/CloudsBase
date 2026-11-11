@@ -61,7 +61,7 @@ grep -oE '^\| P2-[0-9]+' DOCS/CHECKLIST.md | grep -oE '[0-9]+$' | sort -n | tail
 Ba cột: `| Đầu việc | Trạng thái | Note |`
 
 - Cột *Đầu việc* **phải** đúng dạng `P<phase>-<số> · <tên>`. Dấu `·` là U+00B7, có khoảng trắng hai bên —
-  script xuất Excel khớp đúng regex này, sai dạng là dòng bị bỏ khỏi bản xuất mà không báo lỗi.
+  giữ đúng một dạng là điều kiện để đếm và soát được bằng `grep` ở mục 5.
 - Chèn **cuối mục phase tương ứng**, trước tiêu đề `## PHASE <n+1>`.
 - Ký hiệu trạng thái: `PROCESS.md` mục 3. Không bịa ký hiệu mới — script sẽ ném `ValueError: Trạng thái lạ`.
 - Cột Note: mốc của phase, **còn thiếu gì**, link doc. Việc còn phần chưa xong → ghi rõ phần đó **và** thêm
@@ -78,23 +78,24 @@ treo).
 
 ---
 
-## 5. Cổng kiểm bằng máy
+## 5. Soát bằng grep
 
-```bash
-python DOCS/tools/backlog_to_xlsx.py
-```
-
-Đọc `DOCS/CHECKLIST.md`, ghi `DOCS/CHECKLIST.xlsx`, in ra số phase và số việc. Chạy được **và** số việc
-khớp số dòng `P<n>-` là bảng còn hợp lệ. `ValueError: Trạng thái lạ` = ký hiệu trạng thái sai.
-
-Cần `openpyxl` (`pip install openpyxl`) — chưa cài thì lệnh chết ở dòng import và cổng này coi như không có.
-
-Đếm nhanh không cần chạy script, không sinh file:
+**Markdown là bản duy nhất** — không xuất Excel, không sinh file song song. Ba lệnh soát, chạy sau mỗi lần sửa:
 
 ```bash
 grep -cE '^\| P[0-9]+-' DOCS/CHECKLIST.md
+```
+
+```bash
 grep -oE '^\| P[0-9]+-[0-9]+[^|]*\| *[^ |]+' DOCS/CHECKLIST.md | awk '{print $NF}' | sort | uniq -c
 ```
 
-⚠ `DOCS/CHECKLIST.xlsx` là bản xuất, sinh lại được — thêm nó vào `.gitignore` trước khi chạy thường xuyên,
-không thì mỗi lượt chạy để lại một file chưa theo dõi.
+```bash
+awk -F'|' '/^\| P[0-9]+-/ && NF != 5 {print FILENAME":"NR}' DOCS/CHECKLIST.md DOCS/BACKLOG.md
+```
+
+| Lệnh | Đạt là thế nào |
+|---|---|
+| 1 | Số việc, khớp với số dòng bạn nghĩ là có |
+| 2 | Chỉ ra các ký hiệu trong bảng ở `PROCESS.md` mục 3. Ra ký hiệu lạ = có dòng dùng trạng thái bịa |
+| 3 | **Không in ra gì.** In ra dòng nào nghĩa là dòng đó không đúng 3 cột — thường vì có dấu `\|` chưa escape trong một ô |

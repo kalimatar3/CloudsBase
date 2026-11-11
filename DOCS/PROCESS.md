@@ -128,29 +128,31 @@ Không tự ý đổi thứ tự hàng đợi. Nếu dòng 2 phải làm trướ
 | ID | — | Tiền tố `P<phase>-<số>` trong cột Đầu việc, đánh tiếp từ số lớn nhất, không dùng lại số đã bỏ |
 
 Cột *Đầu việc* của CHECKLIST phải đúng dạng `P<phase>-<số> · <tên>`, dấu `·` là U+00B7 có khoảng trắng hai
-bên — [`tools/backlog_to_xlsx.py`](tools/backlog_to_xlsx.py) khớp đúng regex này, sai dạng là dòng bị bỏ
-khỏi bản xuất mà không báo lỗi.
+bên. Giữ đúng một dạng là điều kiện để đếm và soát được bằng `grep` — mỗi dòng lệch dạng là một dòng
+không ai đếm tới.
 
-### Cổng kiểm bằng máy
+★ **Markdown là bản duy nhất.** Không xuất ra Excel, không sinh file song song. Hai bản của cùng một bảng
+thì sớm muộn lệch nhau, và bản nào đúng thì không ai biết.
 
-Cần `openpyxl` — chưa cài thì lệnh chết ngay ở dòng import, và cổng này coi như không có:
+### Soát bằng grep
 
-```bash
-pip install openpyxl
-```
-
-```bash
-python DOCS/tools/backlog_to_xlsx.py
-```
-
-Đọc `CHECKLIST.md`, ghi `CHECKLIST.xlsx`, in ra số phase và số việc. Chạy được **và** số việc khớp số dòng
-`P<n>-` là bảng còn hợp lệ. `ValueError: Trạng thái lạ` = ký hiệu trạng thái sai.
-
-Đếm nhanh không cần chạy script, không sinh file:
+Đếm số việc, và đếm theo từng ký hiệu trạng thái:
 
 ```bash
 grep -cE '^\| P[0-9]+-' DOCS/CHECKLIST.md
 ```
+
+```bash
+grep -oE '^\| P[0-9]+-[0-9]+[^|]*\| *[^ |]+' DOCS/CHECKLIST.md | awk '{print $NF}' | sort | uniq -c
+```
+
+Lệnh thứ hai ra ký hiệu lạ nghĩa là có dòng dùng trạng thái không có trong bảng trên. Kiểm số cột:
+
+```bash
+awk -F'|' '/^\| P[0-9]+-/ && NF != 5 {print FILENAME":"NR}' DOCS/CHECKLIST.md DOCS/BACKLOG.md
+```
+
+In ra dòng nào nghĩa là dòng đó không đúng 3 cột — thường vì có dấu `|` chưa được escape trong một ô.
 
 ---
 

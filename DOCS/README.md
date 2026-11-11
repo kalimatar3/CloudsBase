@@ -42,9 +42,11 @@ DOCS/
 │   └── PHASE<n>_ACCEPTANCE.md  testcase nghiệm thu
 ├── DEV/             kiến trúc, lộ trình kỹ thuật, quy ước làm việc
 ├── QA/              tiêu chí chất lượng theo tính năng
-├── Art/             đặc tả kỹ thuật art
-└── tools/           backlog_to_xlsx.py — xuất CHECKLIST.md ra Excel
+└── Art/             đặc tả kỹ thuật art
 ```
+
+★ `CHECKLIST.md` và `BACKLOG.md` **chỉ có bản markdown** — không xuất Excel, không sinh file song song.
+Soát bằng `grep`, xem [PROCESS.md](PROCESS.md) mục 3.
 
 ## Nguyên tắc: mỗi thông tin có đúng MỘT nhà
 

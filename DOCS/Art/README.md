@@ -10,6 +10,19 @@
 |---|---|
 | _(chưa có)_ | |
 
+## Quy trình sản xuất asset 3D — chưa viết
+
+Base **chưa mang theo** quy trình sản xuất 3D nào. Bộ công cụ của dự án trước (script Blender đo tỉ lệ,
+retopo, so silhouette với concept) đã được đánh giá là **không đủ tốt để dùng lại**, nên nó cố ý không
+lên đây.
+
+Hướng đã chốt cho bản xây lại: **dựng khối ở Meshy AI**, hoàn thiện bằng **Blender và Unity ở mức cơ
+bản** — không dựng lại tầng script đo đạc. Nhà của nó khi viết: `PIPELINE_3D.md` trong thư mục này.
+
+⚠ **Khi nối Meshy vào repo:** khai báo MCP server trong `.mcp.json` nhưng API key phải để dạng
+`"MESHY_API_KEY": "${MESHY_API_KEY}"` và đặt giá trị thật ở biến môi trường. **Không** viết key vào
+`.mcp.json` — file đó nằm trong git.
+
 ## Khung chuẩn của một file đặc tả art
 
 ```
